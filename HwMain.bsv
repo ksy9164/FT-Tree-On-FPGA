@@ -2,20 +2,22 @@ import FIFO::*;
 import FIFOF::*;
 import Clocks::*;
 import Vector::*;
-
 import BRAM::*;
 import BRAMFIFO::*;
 
 import PcieCtrl::*;
+import Serializer::*;
+import Tokenizer::*;
 
 interface HwMainIfc;
 endinterface
 
-
 module mkHwMain#(PcieUserIfc pcie) 
     (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
-    FIFO#(Bit#(32)) inputQ <- mkFIFO;
+
+    DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
+    TokenizerIfc tokenizer <- mkTokenizer;
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -26,18 +28,51 @@ module mkHwMain#(PcieUserIfc pcie)
         if ( off == 0 ) begin
             file_size <= d;
         end else if (off == 1) begin
-            inputQ.enq(d);
+            deserial_pcieio.put(d);
         end else begin
             $display("PCIe offset error!");
         end
     endrule
 
-    rule dividingData;
-        inputQ.deq;
-        let d = inputQ.first;
-        $display("%d", d[7:0]);
-        $display("%d", d[15:8]);
-        $display("%d", d[23:16]);
-        $display("%d", d[31:24]);
+    rule doTokenizing; // Maximum word length is 8 (8 bytes)
+        Bit#(64) d <- deserial_pcieio.get;
+        tokenizer.put(d);
+    endrule
+
+    rule sendToHost;
+        Tuple2#(Bit#(1), Bit#(128)) d <- tokenizer.get;
+        let r <- pcie.dataReq;
+        let a = r.addr;
+        let offset = (a>>2);
+
+        /* For Test */
+/*         Bit#(128) temp = tpl_2(d);
+ *         Vector#(16, Bit#(8)) vec = replicate(0);
+ *         Bit#(5) cnt = 0;
+ *
+ *         for (Bit#(7) i = 0; i < 16; i = i + 1) begin
+ *             vec[i] = temp[(i+1) * 8 - 1 : i * 8];
+ *         end
+ *
+ *         for (Int#(7) i = 15; i >= 0; i = i - 1) begin
+ *             if (vec[i] == 0) begin
+ *                 cnt = cnt + 1;
+ *             end else begin
+ *                 $write("%c", vec[i]);
+ *             end
+ *         end
+ *
+ *         if (cnt != 0) begin
+ *             $display("");
+ *         end */
+
+        // for preventing compiler optimize out
+        Bit#(32) random = zeroExtend(tpl_1(d));
+        random = random | truncate(tpl_2(d));
+        random = random ^ truncate(tpl_2(d) >> 32);
+
+        if (offset == 0) begin
+            pcie.dataSend(r, random);
+        end
     endrule
 endmodule

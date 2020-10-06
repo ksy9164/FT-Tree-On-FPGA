@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
     /* Get file size */
     fseek(fin, 0, SEEK_END);
     file_size = ftell(fin);
-   buff_size = file_size / 4;
+    buff_size = file_size / 4;
     if (file_size % 4 != 0)
         buff_size++;
     rewind(fin);
@@ -35,8 +35,17 @@ int main(int argc, char** argv) {
     pcie->userWriteWord(0, file_size);
 
     /* Put data */
-    for (int i = 0; i < buff_size; ++i)
+    /* for (int i = 0; i < buff_size; ++i)
+     *     pcie->userWriteWord(4, log_data[i]); */
+
+    /* test (You have to increase Tokenizers' output FIFO size)*/
+    for (int i = 0; i < 5000; ++i)
         pcie->userWriteWord(4, log_data[i]);
+
+    for (int i = 0; i < 5000; ++i) {
+        uint32_t getd = pcie->userReadWord(0);
+        log_data[i] = getd;
+    }
 
     printf("Data sending is done \n");
     sleep(3);
