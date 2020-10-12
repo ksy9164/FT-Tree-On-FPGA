@@ -45,6 +45,7 @@ int main(int argc, char** argv) {
     for (int i = 0; i < 5000; ++i) {
         uint32_t getd = pcie->userReadWord(0);
         log_data[i] = getd;
+        printf("%d ",log_data[i]);
     }
 
     printf("Data sending is done \n");

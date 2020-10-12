@@ -40,7 +40,7 @@ module mkHwMain#(PcieUserIfc pcie)
     endrule
 
     rule sendToHost;
-        Tuple2#(Bit#(1), Bit#(128)) d <- tokenizer.get;
+        Tuple3#(Bit#(1), Bit#(32), Bit#(32)) d <- tokenizer.get;
         let r <- pcie.dataReq;
         let a = r.addr;
         let offset = (a>>2);
@@ -67,12 +67,10 @@ module mkHwMain#(PcieUserIfc pcie)
  *         end */
 
         // for preventing compiler optimize out
-        Bit#(32) random = zeroExtend(tpl_1(d));
-        random = random | truncate(tpl_2(d));
-        random = random ^ truncate(tpl_2(d) >> 32);
-
         if (offset == 0) begin
-            pcie.dataSend(r, random);
+            pcie.dataSend(r, tpl_2(d) | zeroExtend(tpl_1(d)));
+        end else begin
+            pcie.dataSend(r, tpl_3(d) | zeroExtend(tpl_1(d)));
         end
     endrule
 endmodule
