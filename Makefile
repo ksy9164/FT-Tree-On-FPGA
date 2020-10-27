@@ -4,7 +4,7 @@ BUILDTOOLS=$(LIBPATH)/buildtools/
 
 BLIBPATH=$(LIBPATH)/../bluelib/src/
 
-CUSTOMBSV= -p +:$(BLIBPATH)/
+CUSTOMBSV= -p +:$(BLIBPATH)/:./lib
 CUSTOMCPP_BSIM= $(BLIBPATH)/bdpi.cpp
 
 include $(BUILDTOOLS)/Makefile.base

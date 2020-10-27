@@ -8,9 +8,14 @@ import BRAMFIFO::*;
 import PcieCtrl::*;
 import Serializer::*;
 import Tokenizer::*;
+import BramCtl::*;
 
 interface HwMainIfc;
 endinterface
+
+typedef 128 TOKEN_SIZE;
+typedef 256 TABLE_SIZE;
+typedef 8 HASH_SIZE;
 
 module mkHwMain#(PcieUserIfc pcie) 
     (HwMainIfc);
@@ -18,6 +23,7 @@ module mkHwMain#(PcieUserIfc pcie)
 
     DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
     TokenizerIfc tokenizer <- mkTokenizer;
+    BramCtlIfc#(TOKEN_SIZE, TABLE_SIZE, HASH_SIZE) brams <- mkBramCtl;
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -44,27 +50,6 @@ module mkHwMain#(PcieUserIfc pcie)
         let r <- pcie.dataReq;
         let a = r.addr;
         let offset = (a>>2);
-
-        /* For Test */
-/*         Bit#(128) temp = tpl_2(d);
- *         Vector#(16, Bit#(8)) vec = replicate(0);
- *         Bit#(5) cnt = 0;
- *
- *         for (Bit#(7) i = 0; i < 16; i = i + 1) begin
- *             vec[i] = temp[(i+1) * 8 - 1 : i * 8];
- *         end
- *
- *         for (Int#(7) i = 15; i >= 0; i = i - 1) begin
- *             if (vec[i] == 0) begin
- *                 cnt = cnt + 1;
- *             end else begin
- *                 $write("%c", vec[i]);
- *             end
- *         end
- *
- *         if (cnt != 0) begin
- *             $display("");
- *         end */
 
         // for preventing compiler optimize out
         if (offset == 0) begin
