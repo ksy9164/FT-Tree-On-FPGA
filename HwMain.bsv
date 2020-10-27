@@ -23,8 +23,10 @@ module mkHwMain#(PcieUserIfc pcie)
 
     DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
     TokenizerIfc tokenizer <- mkTokenizer;
-    BramCtlIfc#(TOKEN_SIZE, TABLE_SIZE, HASH_SIZE) brams <- mkBramCtl;
 
+    BramCtlIfc#(TOKEN_SIZE, TABLE_SIZE, HASH_SIZE) bram_val <- mkBramCtl; // 128 x 256 Size BRAM
+    BramCtlIfc#(2, TABLE_SIZE, HASH_SIZE) bram_ <- mkBramCtl; // 128 x 256 Size BRAM
+    
     rule getDataFromHost;
         let w <- pcie.dataReceive;
         let a = w.addr;
@@ -46,16 +48,16 @@ module mkHwMain#(PcieUserIfc pcie)
     endrule
 
     rule sendToHost;
-        Tuple3#(Bit#(1), Bit#(32), Bit#(32)) d <- tokenizer.get;
+        Tuple4#(Bit#(1), Bit#(TOKEN_SIZE), Bit#(HASH_SIZE), Bit#(HASH_SIZE)) d <- tokenizer.get;
         let r <- pcie.dataReq;
         let a = r.addr;
         let offset = (a>>2);
 
         // for preventing compiler optimize out
         if (offset == 0) begin
-            pcie.dataSend(r, tpl_2(d) | zeroExtend(tpl_1(d)));
+            pcie.dataSend(r, zeroExtend(tpl_3(d)) | zeroExtend(tpl_4(d)));
         end else begin
-            pcie.dataSend(r, tpl_3(d) | zeroExtend(tpl_1(d)));
+            pcie.dataSend(r, zeroExtend(tpl_3(d)) | zeroExtend(tpl_4(d)));
         end
     endrule
 endmodule
