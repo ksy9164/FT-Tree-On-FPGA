@@ -5,10 +5,12 @@ import Vector::*;
 import Serializer::*;
 import BRAM::*;
 import BRAMFIFO::*;
+import FIFOLI::*;
 
 interface TokenizerIfc;
     method Action put(Bit#(64) data);
-    method ActionValue#(Tuple4#(Bit#(1), Bit#(128), Bit#(8), Bit#(8))) get;
+    method ActionValue#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) get_hash;
+    method ActionValue#(Bit#(128)) get_word;
 endinterface
 
 (* synthesize *)
@@ -16,13 +18,11 @@ module mkTokenizer (TokenizerIfc);
     FIFO#(Bit#(64)) inputQ <- mkFIFO;
     FIFO#(Vector#(2, Bit#(8))) toTokenizingQ <- mkFIFO;
     FIFO#(Vector#(2, Bit#(8))) toHashingQ <- mkFIFO;
-    FIFO#(Vector#(2, Bit#(8))) toOutQ <- mkFIFO;
-    FIFO#(Bit#(128)) wordQ <- mkSizedFIFO(4);
-    FIFO#(Bit#(1)) tokenFlagQ <- mkSizedFIFO(4);
-    FIFO#(Tuple4#(Bit#(1),Bit#(128), Bit#(8), Bit#(8))) outputQ <- mkFIFO; // lineSpace flag & data
+    FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;
+    FIFOLI#(Bit#(128), 5) wordQ <- mkFIFOLI;
+    FIFOLI#(Bit#(1), 5) linespaceQ <- mkFIFOLI;
 
     Reg#(Bit#(128)) token_buff <- mkReg(0);
-    Reg#(Bit#(1)) token_flag <- mkReg(0);
     Reg#(Bit#(4)) char_cnt <- mkReg(0);
     Reg#(Bit#(8)) hash_a <- mkReg(0);
     Reg#(Bit#(8)) hash_b <- mkReg(0);
@@ -51,39 +51,41 @@ module mkTokenizer (TokenizerIfc);
         Vector#(2, Bit#(8)) d = toTokenizingQ.first;
         Bit#(4) cnt = char_cnt;
         Bit#(128) t_buff = token_buff;
-        Bit#(1) flag =  token_flag;
 
         if (d[0] == 32 || d[0] == 10) begin // If it has space or lineSpace
             token_buff <= zeroExtend(d[1]);
             char_cnt <= 1;
-            if (d[0] == 10)
-                token_flag <= token_flag + 1;
+            if (d[0] == 10) begin
+                linespaceQ.enq(1);
+            end else begin
+                linespaceQ.enq(0);
+            end
 
             wordQ.enq(t_buff);
-            tokenFlagQ.enq(flag);
 
         end else if (d[1] == 32|| d[1] == 10) begin
             t_buff = (t_buff << 8) | zeroExtend(d[0]);
             token_buff <= 0;
             char_cnt <= 0;
-            if (d[1] == 10)
-                token_flag <= token_flag + 1;
+            if (d[1] == 10) begin
+                linespaceQ.enq(1);
+            end else begin
+                linespaceQ.enq(0);
+            end
+
             wordQ.enq(t_buff);
-            tokenFlagQ.enq(flag);
 
         end else if (cnt == 14) begin // maximum word length is 16
             t_buff = (t_buff << 16) | (zeroExtend(d[0]) << 8) | zeroExtend(d[1]);
             token_buff <= 0;
             char_cnt <= 0;
             wordQ.enq(t_buff);
-            tokenFlagQ.enq(flag);
 
         end else if (cnt == 15) begin
             t_buff = (t_buff << 8) | zeroExtend(d[0]);
             token_buff <= zeroExtend(d[1]);
             char_cnt <= 1;
             wordQ.enq(t_buff);
-            tokenFlagQ.enq(flag);
 
         end else begin              // append to Buffer
             t_buff = (t_buff << 16) | (zeroExtend(d[0]) << 8) | zeroExtend(d[1]);
@@ -102,34 +104,32 @@ module mkTokenizer (TokenizerIfc);
 
         if (d[0] == 32 || d[0] == 10) begin
             hash_a <= d[1];
-            hash_b <= d[1] + 3;
-            toOutQ.enq(hash);
+            hash_b <= d[1] * 7;
+            hashQ.enq(hash);
         end else if (d[1] == 32|| d[1] == 10) begin
             hash[0] = hash_a ^ d[0];
-            hash[1] = hash_b ^ (d[0] + 3);
+            hash[1] = hash_b ^ (d[0] * 7);
             hash_a <= 0;
             hash_b <= 0;
-            toOutQ.enq(hash);
+            hashQ.enq(hash);
         end else begin
             hash_a <= hash_a ^ d[0] ^ d[1];
-            hash_b <= hash_b ^ (d[0] + 3) ^ (d[1] + 3);
+            hash_b <= hash_b ^ (d[0] * 7) ^ (d[1] * 7);
         end
     endrule
 
-    rule out;
-        toOutQ.deq;
-        wordQ.deq;
-        tokenFlagQ.deq;
-        outputQ.enq(tuple4(tokenFlagQ.first, wordQ.first, toOutQ.first[0], toOutQ.first[1]));
-    endrule
     method Action put(Bit#(64) data);
         inputQ.enq(data);
     endmethod
-    method ActionValue#(Tuple4#(Bit#(1),Bit#(128), Bit#(8), Bit#(8))) get;
-        outputQ.deq;
-        return outputQ.first;
+    method ActionValue#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) get_hash;
+        hashQ.deq;
+        linespaceQ.deq;
+        return tuple3(linespaceQ.first, hashQ.first[0], hashQ.first[1]);
+    endmethod
+    method ActionValue#(Bit#(128)) get_word;
+        wordQ.deq;
+        return wordQ.first;
     endmethod
 
 endmodule
 endpackage
-

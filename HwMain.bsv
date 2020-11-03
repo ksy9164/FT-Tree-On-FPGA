@@ -9,24 +9,21 @@ import PcieCtrl::*;
 import Serializer::*;
 import Tokenizer::*;
 import BramCtl::*;
+import Detector::*;
+import FIFOLI::*;
 
 interface HwMainIfc;
 endinterface
 
-typedef 128 TOKEN_SIZE;
-typedef 256 TABLE_SIZE;
-typedef 8 HASH_SIZE;
-
 module mkHwMain#(PcieUserIfc pcie) 
     (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
+    Reg#(Bit#(8)) addr <- mkReg(0);
 
     DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
     TokenizerIfc tokenizer <- mkTokenizer;
+    DetectorIfc detector <- mkDetector;
 
-    BramCtlIfc#(TOKEN_SIZE, TABLE_SIZE, HASH_SIZE) bram_val <- mkBramCtl; // 128 x 256 Size BRAM
-    BramCtlIfc#(2, TABLE_SIZE, HASH_SIZE) bram_ <- mkBramCtl; // 128 x 256 Size BRAM
-    
     rule getDataFromHost;
         let w <- pcie.dataReceive;
         let a = w.addr;
@@ -42,22 +39,32 @@ module mkHwMain#(PcieUserIfc pcie)
         end
     endrule
 
-    rule doTokenizing; // Maximum word length is 8 (8 bytes)
+    rule toTokenizingBridge; // Maximum word length is 8 (8 bytes)
         Bit#(64) d <- deserial_pcieio.get;
         tokenizer.put(d);
     endrule
 
-    rule sendToHost;
-        Tuple4#(Bit#(1), Bit#(TOKEN_SIZE), Bit#(HASH_SIZE), Bit#(HASH_SIZE)) d <- tokenizer.get;
+    rule putHashToDetectorBridge;
+        Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- tokenizer.get_hash;
+        detector.put_hash(d);
+    endrule
+
+    rule putWordToDetector;
+        Bit#(128) d <- tokenizer.get_word;
+        detector.put_word(d);
+    endrule
+
+    rule getResultSendToHost;
+        Bit#(1) d <- detector.get_result;
         let r <- pcie.dataReq;
         let a = r.addr;
         let offset = (a>>2);
 
         // for preventing compiler optimize out
         if (offset == 0) begin
-            pcie.dataSend(r, zeroExtend(tpl_3(d)) | zeroExtend(tpl_4(d)));
+            pcie.dataSend(r, zeroExtend(d));
         end else begin
-            pcie.dataSend(r, zeroExtend(tpl_3(d)) | zeroExtend(tpl_4(d)));
+            pcie.dataSend(r, zeroExtend(d));
         end
     endrule
 endmodule
