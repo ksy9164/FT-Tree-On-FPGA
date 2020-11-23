@@ -9,7 +9,7 @@ import FIFOLI::*;
 
 interface TokenizerIfc;
     method Action put(Bit#(64) data);
-    method ActionValue#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) get_hash;
+    method ActionValue#(Tuple4#(Bit#(1),Bit#(1), Bit#(8), Bit#(8))) get_hash;
     method ActionValue#(Bit#(128)) get_word;
 endinterface
 
@@ -21,6 +21,7 @@ module mkTokenizer (TokenizerIfc);
     FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;
     FIFOLI#(Bit#(128), 5) wordQ <- mkFIFOLI;
     FIFOLI#(Bit#(1), 5) linespaceQ <- mkFIFOLI;
+    FIFOLI#(Bit#(1), 5) wordendQ <- mkFIFOLI;
 
     Reg#(Bit#(128)) token_buff <- mkReg(0);
     Reg#(Bit#(4)) char_cnt <- mkReg(0);
@@ -61,6 +62,7 @@ module mkTokenizer (TokenizerIfc);
                 linespaceQ.enq(0);
             end
 
+            wordendQ.enq(1);
             wordQ.enq(t_buff);
 
         end else if (d[1] == 32|| d[1] == 10) begin
@@ -73,6 +75,7 @@ module mkTokenizer (TokenizerIfc);
                 linespaceQ.enq(0);
             end
 
+            wordendQ.enq(1);
             wordQ.enq(t_buff);
 
         end else if (cnt == 14) begin // maximum word length is 16
@@ -80,12 +83,14 @@ module mkTokenizer (TokenizerIfc);
             token_buff <= 0;
             char_cnt <= 0;
             wordQ.enq(t_buff);
+            wordendQ.enq(0);
 
         end else if (cnt == 15) begin
             t_buff = (t_buff << 8) | zeroExtend(d[0]);
             token_buff <= zeroExtend(d[1]);
             char_cnt <= 1;
             wordQ.enq(t_buff);
+            wordendQ.enq(0);
 
         end else begin              // append to Buffer
             t_buff = (t_buff << 16) | (zeroExtend(d[0]) << 8) | zeroExtend(d[1]);
@@ -102,11 +107,11 @@ module mkTokenizer (TokenizerIfc);
         hash[0] = hash_a;
         hash[1] = hash_b;
 
-        if (d[0] == 32 || d[0] == 10) begin
+        if (d[0] == 32 || d[0] == 10) begin // If d[0] = ' ' or '\n'
             hash_a <= d[1];
             hash_b <= d[1] * 7;
             hashQ.enq(hash);
-        end else if (d[1] == 32|| d[1] == 10) begin
+        end else if (d[1] == 32|| d[1] == 10) begin // If d[0] = ' ' or '\n'
             hash[0] = hash_a ^ d[0];
             hash[1] = hash_b ^ (d[0] * 7);
             hash_a <= 0;
@@ -121,10 +126,11 @@ module mkTokenizer (TokenizerIfc);
     method Action put(Bit#(64) data);
         inputQ.enq(data);
     endmethod
-    method ActionValue#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) get_hash;
+    method ActionValue#(Tuple4#(Bit#(1), Bit#(1), Bit#(8), Bit#(8))) get_hash;
         hashQ.deq;
         linespaceQ.deq;
-        return tuple3(linespaceQ.first, hashQ.first[0], hashQ.first[1]);
+        wordendQ.deq;
+        return tuple4(linespaceQ.first, wordendQ.first, hashQ.first[0], hashQ.first[1]);
     endmethod
     method ActionValue#(Bit#(128)) get_word;
         wordQ.deq;
