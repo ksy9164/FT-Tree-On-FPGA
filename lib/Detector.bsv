@@ -18,7 +18,7 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
     Vector#(2, BramCtlIfc#(138, 256, 8)) bram_main <- replicateM(mkBramCtl); // (128 + 8 + 2) x 256 Size BRAM
     Vector#(2, BramCtlIfc#(129, 256, 8)) bram_sub <- replicateM(mkBramCtl); // (128 + 1) x 256 Size BRAM
 
-    Vector#(3, FIFO#(Bit#(1))) linespaceQ <- replicateM(mkSizedFIFO(17));
+    Vector#(3, FIFOLI#(Bit#(1), 7)) linespaceQ <- replicateM(mkFIFOLI);
     Vector#(3, FIFOLI#(Bit#(1), 5)) wordflagQ <- replicateM(mkFIFOLI);
     Vector#(2, FIFO#(Bit#(2))) compareQ <- replicateM(mkFIFO);
     Vector#(2, FIFO#(Bit#(1))) resultQ <- replicateM(mkFIFO);

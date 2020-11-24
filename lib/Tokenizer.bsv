@@ -15,7 +15,7 @@ endinterface
 
 (* synthesize *)
 module mkTokenizer (TokenizerIfc);
-    FIFO#(Bit#(64)) inputQ <- mkFIFO;
+    FIFOLI#(Bit#(64), 5) inputQ <- mkFIFOLI;
     FIFO#(Vector#(2, Bit#(8))) toTokenizingQ <- mkFIFO;
     FIFO#(Vector#(2, Bit#(8))) toHashingQ <- mkFIFO;
     FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;

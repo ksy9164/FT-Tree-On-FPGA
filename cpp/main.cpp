@@ -28,9 +28,12 @@ int main(int argc, char** argv) {
     int val = 0;
     int i,j;
 
+    printf("Hash upload!\n");
+    fflush(stdout);
     for (i = 0; i < 256; ++i) {
         string str;
         table_stream >> str;
+        cout << str << endl;
         for (j = 0; j < str.size(); ++j)
             dmabuf[idx++] = (uint8_t)str[j];
         if (str.size() < 16)
@@ -46,6 +49,8 @@ int main(int argc, char** argv) {
 
     pcie->userWriteWord(8, 0);
 
+    printf("Sub Table upload!\n");
+    fflush(stdout);
     ifstream sub_stream;
     sub_stream.open(sub_hash_file_name);
     idx = 16000;
@@ -54,6 +59,7 @@ int main(int argc, char** argv) {
     for (i = 0; i < 256; ++i) {
         string str;
         sub_stream >> str;
+        /* cout << str << endl; */
         for (j = 0; j < str.size(); ++j)
             dmabuf[idx++] = (uint8_t)str[j];
         if (str.size() < 16)
@@ -69,15 +75,16 @@ int main(int argc, char** argv) {
     uint32_t file_size = 0;
     uint32_t buff_size = 0;
 
+    printf("Table uploading is done! \n");
+    fflush(stdout);
     sleep(3);
-
     /************************ Get Result ***************************/
     uint32_t cnt[4] = {0,};
     uint32_t const_idx[4] = {0, 1600, 3200, 4800};
     uint32_t result_file_idx[4] = {0,};
     char *result_data[4];
     for (int i = 0; i < 4; ++i) {
-        result_data[i] = (char *)malloc(10000 * sizeof(char));
+        result_data[i] = (char *)malloc(100000 * sizeof(char));
     }
 
     while(1) {
