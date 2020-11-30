@@ -31,18 +31,21 @@ int main(int argc, char** argv) {
     printf("Hash upload!\n");
     fflush(stdout);
     for (i = 0; i < 256; ++i) {
+        uint32_t arr[4];
         for (j = 0; j < 4; j++) {
             uint32_t d = 0;
-            table_stream >> d;
-            pcie->userWriteWord(8, d);
+            table_stream >> arr[j];
+        }
+        for (j = 3; j >= 0; j--) {
+            pcie->userWriteWord(8, arr[j]);
         }
         uint32_t sub_hash_idx;
         uint32_t svbits;
         uint32_t merged = 0;
         table_stream >> sub_hash_idx;
         table_stream >> svbits;
+        svbits = svbits >> 16;
         merged = sub_hash_idx;
-        svbits << 8;
         merged = merged | svbits;
         pcie->userWriteWord(8, merged);
     }
@@ -55,9 +58,17 @@ int main(int argc, char** argv) {
     sub_stream.open(sub_hash_file_name);
     val = 0;
     while(!sub_stream.eof()) {
+        uint32_t arr[4];
+        uint32_t d;
+        for (j = 0; j < 4; j++) {
             uint32_t d = 0;
-            sub_stream >> d;
-            pcie->userWriteWord(8, d);
+            sub_stream >> arr[j];
+        }
+        for (j = 3; j >= 0; j--) {
+            pcie->userWriteWord(12, arr[j]);
+        }
+        sub_stream >> d;
+        pcie->userWriteWord(12, d);
     }
 
     printf("Sub Table uploading Done!\n");

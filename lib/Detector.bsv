@@ -4,10 +4,11 @@ import Vector::*;
 
 import BramCtl::*;
 import FIFOLI::*;
+import DividedFIFO::*;
 
 interface DetectorIfc;
-    method Action put_hash(Tuple2#(Bit#(8), Bit#(8)) hash);
-    method Action put_word(Tuple3#(Bit#(1), Bit#(1), Bit#(128)) word);
+    method Action put_hash(Tuple3#(Bit#(1), Bit#(8), Bit#(8)) hash);
+    method Action put_word(Tuple2#(Bit#(1), Bit#(128)) word);
     method Action put_table(Bit#(144) word);
     method Action put_sub_table(Bit#(129) word);
     method ActionValue#(Bit#(128)) get_result;
@@ -18,16 +19,18 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
     Vector#(2, BramCtlIfc#(138, 256, 8)) bram_main <- replicateM(mkBramCtl); // (128 + 8 + 2) x 256 Size BRAM
     Vector#(2, BramCtlIfc#(129, 256, 8)) bram_sub <- replicateM(mkBramCtl); // (128 + 1) x 256 Size BRAM
 
-    Vector#(3, FIFOLI#(Bit#(1), 7)) linespaceQ <- replicateM(mkFIFOLI);
-    Vector#(3, FIFOLI#(Bit#(1), 5)) wordflagQ <- replicateM(mkFIFOLI);
-    Vector#(2, FIFO#(Bit#(2))) compareQ <- replicateM(mkFIFO);
-    Vector#(2, FIFO#(Bit#(1))) resultQ <- replicateM(mkFIFO);
-    Vector#(2, FIFOLI#(Bit#(256), 3)) hit_compareQ <- replicateM(mkFIFOLI);
-    Vector#(4, FIFOLI#(Bit#(8), 5)) hashQ <- replicateM(mkFIFOLI);
-    Vector#(2, FIFOLI#(Bit#(128), 5)) wordQ <- replicateM(mkFIFOLI);
-    FIFO#(Bit#(1)) detectionQ <- mkFIFO;
+    Vector#(3, DividedFIFOIfc#(Bit#(1), 30, 3)) linespaceQ <- replicateM(mkDividedFIFO);
+    Vector#(3, FIFOLI#(Bit#(1), 3)) wordflagQ <- replicateM(mkFIFOLI);
+    Vector#(3, FIFOLI#(Bit#(128), 3)) wordQ <- replicateM(mkFIFOLI);
+    Vector#(2, FIFO#(Bit#(256))) hit_compareQ <- replicateM(mkFIFO);
+    Vector#(4, FIFO#(Bit#(8))) hashQ <- replicateM(mkSizedFIFO(11));
+    FIFO#(Bit#(128)) wordoutQ <- mkSizedFIFO(30);
+    FIFO#(Bit#(1)) wordflagoutQ <- mkSizedFIFO(30);
     FIFOLI#(Bit#(128), 5) outputQ <- mkFIFOLI;
-    FIFOLI#(Bit#(128), 5) wordoutQ <- mkFIFOLI;
+
+    FIFO#(Bit#(1)) detectionQ <- mkFIFO;
+    Vector#(2, FIFO#(Bit#(1))) resultQ <- replicateM(mkFIFO);
+    Vector#(2, FIFO#(Bit#(2))) compareQ <- replicateM(mkFIFO);
 
     Vector#(2, Reg#(Bit#(2))) compare_handle <- replicateM(mkReg(0));
     Vector#(2, Reg#(Bit#(2))) sub_flag <- replicateM(mkReg(0));
@@ -70,6 +73,8 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
                     sub_link[i] <= link;
                     bram_sub[i].read_req(link);
                     compare_handle[i] <= 1;
+                    /* compareQ[i].enq(0); // for testing
+                     * compare_handle[i] <= 2; */
                 end
             end else if (wordflag == 1)begin // Word unmatching
                 compareQ[i].enq(0);
@@ -176,12 +181,12 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
     endrule
 
     rule outputRule(output_handle == 1); // Normal status
-        wordflagQ[2].deq;
+        wordflagoutQ.deq;
         wordoutQ.deq;
         linespaceQ[2].deq;
 
         Bit#(1) linespace = linespaceQ[2].first;
-        Bit#(1) wordflag = wordflagQ[2].first;
+        Bit#(1) wordflag = wordflagoutQ.first;
         if (linespace == 1 && wordflag == 1) begin
             output_handle <= 0;
         end else if (linespace == 1 && wordflag == 0) begin
@@ -197,8 +202,8 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
 
     rule wordRemainLineEnd(output_handle == 2); // line end & word remains
         wordoutQ.deq;
-        wordflagQ[2].deq;
-        Bit#(1) wordflag = wordflagQ[2].first;
+        wordflagoutQ.deq;
+        Bit#(1) wordflag = wordflagoutQ.first;
 
         if(wordflag == 0) begin
             output_handle <= 2;
@@ -215,8 +220,8 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
 
     rule wordRemain(output_handle == 3); //word remains
         wordoutQ.deq;
-        wordflagQ[2].deq;
-        Bit#(1) wordflag = wordflagQ[2].first;
+        wordflagoutQ.deq;
+        Bit#(1) wordflag = wordflagoutQ.first;
 
         if(wordflag == 0) begin
             output_handle <= 3;
@@ -229,9 +234,22 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
         end
     endrule
 
-    method Action put_hash(Tuple2#(Bit#(8), Bit#(8)) hash);
-        hashQ[0].enq(tpl_1(hash));
-        hashQ[1].enq(tpl_2(hash));
+    rule wordFlagOut;
+        wordflagQ[2].deq;
+        wordflagoutQ.enq(wordflagQ[2].first);
+    endrule
+
+    rule wordOut;
+        wordQ[2].deq;
+        wordoutQ.enq(wordQ[2].first);
+    endrule
+
+    method Action put_hash(Tuple3#(Bit#(1), Bit#(8), Bit#(8)) hash);
+        linespaceQ[0].enq(tpl_1(hash));
+        linespaceQ[1].enq(tpl_1(hash));
+        linespaceQ[2].enq(tpl_1(hash));
+        hashQ[0].enq(tpl_2(hash));
+        hashQ[1].enq(tpl_3(hash));
     endmethod
 
     method Action put_table(Bit#(144) word);
@@ -255,16 +273,13 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
         bram_sub_addr <= bram_sub_addr + 1;
     endmethod
 
-    method Action put_word(Tuple3#(Bit#(1), Bit#(1), Bit#(128)) word);
-        linespaceQ[0].enq(tpl_1(word));
-        linespaceQ[1].enq(tpl_1(word));
-        linespaceQ[2].enq(tpl_1(word));
-        wordflagQ[0].enq(tpl_2(word));
-        wordflagQ[1].enq(tpl_2(word));
-        wordflagQ[2].enq(tpl_2(word));
-        wordQ[0].enq(tpl_3(word));
-        wordQ[1].enq(tpl_3(word));
-        wordoutQ.enq(tpl_3(word));
+    method Action put_word(Tuple2#(Bit#(1), Bit#(128)) word);
+        wordflagQ[0].enq(tpl_1(word));
+        wordflagQ[1].enq(tpl_1(word));
+        wordflagQ[2].enq(tpl_1(word));
+        wordQ[0].enq(tpl_2(word));
+        wordQ[1].enq(tpl_2(word));
+        wordQ[2].enq(tpl_2(word));
     endmethod
 
     method ActionValue#(Bit#(128)) get_result;

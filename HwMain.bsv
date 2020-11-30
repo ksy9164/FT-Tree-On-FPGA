@@ -30,13 +30,13 @@ module mkHwMain#(PcieUserIfc pcie)
     FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
     MultiOneToFourIfc#(Bit#(144)) hashtableQ <- mkMultiOnetoFour;
     MultiOneToFourIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoFour;
-    MultiOneToFourIfc#(Tuple3#(Bit#(1), Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoFour;
-    MultiOneToFourIfc#(Tuple2#(Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoFour;
+    MultiOneToFourIfc#(Tuple2#(Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoFour;
+    MultiOneToFourIfc#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoFour;
 
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) write_reqQ <- mkFIFOLI;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
     
-    Vector#(4, DividedBRAMFIFOIfc#(Bit#(128), 100000, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
+    Vector#(4, DividedBRAMFIFOIfc#(Bit#(128), 100, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
     FIFO#(Bit#(16)) hashtable_cmdQ <- mkFIFO;
@@ -177,24 +177,24 @@ module mkHwMain#(PcieUserIfc pcie)
 
     /* Word -> Detector */
     rule getWordFromTokenizer; // Get Hash data From the Tokenizer
-        Tuple3#(Bit#(1), Bit#(1), Bit#(128)) d <- tokenizer.get_word;
+        Tuple2#(Bit#(1), Bit#(128)) d <- tokenizer.get_word;
         put_wordQ.enq(d);
     endrule
     for (Bit#(4) i = 0; i < 4; i = i + 1) begin
         rule putWordToDetector;
-            Tuple3#(Bit#(1), Bit#(1), Bit#(128)) d <- put_wordQ.get[i].get; //Get Word From the Toknizer
+            Tuple2#(Bit#(1), Bit#(128)) d <- put_wordQ.get[i].get; //Get Word From the Toknizer
             detector[i].put_word(d);
         endrule
     end
 
     /* Hash -> Detector */
     rule getHashFromTokenizer;
-        Tuple2#(Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
+        Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
         put_hashQ.enq(d);
     endrule
     for (Bit#(4) i = 0; i < 4; i = i + 1) begin //Put Word to Detector
         rule putWord;
-            Tuple2#(Bit#(8), Bit#(8)) d <- put_hashQ.get[i].get;
+            Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- put_hashQ.get[i].get;
             detector[i].put_hash(d);
         endrule
     end
