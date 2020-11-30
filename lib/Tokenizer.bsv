@@ -9,8 +9,8 @@ import FIFOLI::*;
 
 interface TokenizerIfc;
     method Action put(Bit#(64) data);
-    method ActionValue#(Tuple4#(Bit#(1),Bit#(1), Bit#(8), Bit#(8))) get_hash;
-    method ActionValue#(Bit#(128)) get_word;
+    method ActionValue#(Tuple3#(Bit#(1), Bit#(1), Bit#(128))) get_word;
+    method ActionValue#(Tuple2#(Bit#(8), Bit#(8))) get_hash;
 endinterface
 
 (* synthesize *)
@@ -43,6 +43,7 @@ module mkTokenizer (TokenizerIfc);
         d[0] = serialized[7:0];
         d[1] = serialized[15:8];
 
+        $write("%c%c",d[0],d[1]);
         toTokenizingQ.enq(d);
         toHashingQ.enq(d);
     endrule
@@ -83,6 +84,7 @@ module mkTokenizer (TokenizerIfc);
             token_buff <= 0;
             char_cnt <= 0;
             wordQ.enq(t_buff);
+            linespaceQ.enq(0);
             wordendQ.enq(0);
 
         end else if (cnt == 15) begin
@@ -90,6 +92,7 @@ module mkTokenizer (TokenizerIfc);
             token_buff <= zeroExtend(d[1]);
             char_cnt <= 1;
             wordQ.enq(t_buff);
+            linespaceQ.enq(0);
             wordendQ.enq(0);
 
         end else begin              // append to Buffer
@@ -126,15 +129,15 @@ module mkTokenizer (TokenizerIfc);
     method Action put(Bit#(64) data);
         inputQ.enq(data);
     endmethod
-    method ActionValue#(Tuple4#(Bit#(1), Bit#(1), Bit#(8), Bit#(8))) get_hash;
-        hashQ.deq;
+    method ActionValue#(Tuple3#(Bit#(1), Bit#(1), Bit#(128))) get_word;
         linespaceQ.deq;
         wordendQ.deq;
-        return tuple4(linespaceQ.first, wordendQ.first, hashQ.first[0], hashQ.first[1]);
-    endmethod
-    method ActionValue#(Bit#(128)) get_word;
         wordQ.deq;
-        return wordQ.first;
+        return tuple3(linespaceQ.first, wordendQ.first, wordQ.first);
+    endmethod
+    method ActionValue#(Tuple2#(Bit#(8), Bit#(8))) get_hash;
+        hashQ.deq;
+        return tuple2(hashQ.first[0], hashQ.first[1]);
     endmethod
 
 endmodule

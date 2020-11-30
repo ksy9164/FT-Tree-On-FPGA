@@ -6,8 +6,8 @@ import BramCtl::*;
 import FIFOLI::*;
 
 interface DetectorIfc;
-    method Action put_hash(Tuple4#(Bit#(1), Bit#(1), Bit#(8), Bit#(8)) hash);
-    method Action put_word(Bit#(128) word);
+    method Action put_hash(Tuple2#(Bit#(8), Bit#(8)) hash);
+    method Action put_word(Tuple3#(Bit#(1), Bit#(1), Bit#(128)) word);
     method Action put_table(Bit#(144) word);
     method Action put_sub_table(Bit#(129) word);
     method ActionValue#(Bit#(128)) get_result;
@@ -229,15 +229,9 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
         end
     endrule
 
-    method Action put_hash(Tuple4#(Bit#(1), Bit#(1), Bit#(8), Bit#(8)) hash);
-        linespaceQ[0].enq(tpl_1(hash)); // for each table hit
-        linespaceQ[1].enq(tpl_1(hash));
-        linespaceQ[2].enq(tpl_1(hash)); // for output
-        wordflagQ[0].enq(tpl_2(hash));
-        wordflagQ[1].enq(tpl_2(hash));
-        wordflagQ[2].enq(tpl_2(hash));
-        hashQ[0].enq(tpl_3(hash));
-        hashQ[1].enq(tpl_4(hash));
+    method Action put_hash(Tuple2#(Bit#(8), Bit#(8)) hash);
+        hashQ[0].enq(tpl_1(hash));
+        hashQ[1].enq(tpl_2(hash));
     endmethod
 
     method Action put_table(Bit#(144) word);
@@ -261,10 +255,16 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
         bram_sub_addr <= bram_sub_addr + 1;
     endmethod
 
-    method Action put_word(Bit#(128) word);
-        wordQ[0].enq(word);
-        wordQ[1].enq(word);
-        wordoutQ.enq(word);
+    method Action put_word(Tuple3#(Bit#(1), Bit#(1), Bit#(128)) word);
+        linespaceQ[0].enq(tpl_1(word));
+        linespaceQ[1].enq(tpl_1(word));
+        linespaceQ[2].enq(tpl_1(word));
+        wordflagQ[0].enq(tpl_2(word));
+        wordflagQ[1].enq(tpl_2(word));
+        wordflagQ[2].enq(tpl_2(word));
+        wordQ[0].enq(tpl_3(word));
+        wordQ[1].enq(tpl_3(word));
+        wordoutQ.enq(tpl_3(word));
     endmethod
 
     method ActionValue#(Bit#(128)) get_result;

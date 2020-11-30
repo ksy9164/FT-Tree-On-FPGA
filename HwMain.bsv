@@ -12,6 +12,7 @@ import BramCtl::*;
 import Detector::*;
 import FIFOLI::*;
 import DividedFIFO::*;
+import MultiN::*;
 
 interface HwMainIfc;
 endinterface
@@ -20,33 +21,36 @@ module mkHwMain#(PcieUserIfc pcie)
     (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
     Reg#(Bit#(32)) addr <- mkReg(0);
-    /* Vector#(4, Reg#(Bit#(32))) dma_addr <- replicateM(mkReg(0)); */
     Vector#(4, Reg#(Bit#(32))) output_cnt <- replicateM(mkReg(0));
     Reg#(Bit#(10)) write_cnt <- mkReg(0);
     Reg#(Bit#(10)) write_target_number <- mkReg(0);
-    Reg#(Bit#(10)) wordReadLeft <- mkReg(0);
-    FIFO#(Bit#(2)) dma_handleQ <- mkFIFO;
-    Reg#(Bit#(2)) dma_handle <- mkReg(0);
 
-    Reg#(Bit#(144)) hash_table_data <- mkReg(0);
-    Reg#(Bit#(129)) sub_hash_table_data <- mkReg(0);
-    Reg#(Bit#(1)) table_merge_handle <- mkReg(0);
     Reg#(Bit#(2)) write_handle <- mkReg(0);
-    Reg#(Bit#(1)) sub_table_merge_handle <- mkReg(0);
     
     FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
-    FIFOLI#(Bit#(144), 5) hashtableQ <- mkFIFOLI;
-    FIFOLI#(Bit#(129), 5) sub_hashtableQ <- mkFIFOLI;
-
-    Vector#(2, FIFO#(Bit#(144)))  put_hashQ <- replicateM(mkFIFO);
-    Vector#(2, FIFO#(Bit#(129)))  put_sub_hashQ <- replicateM(mkFIFO);
+    MultiOneToFourIfc#(Bit#(144)) hashtableQ <- mkMultiOnetoFour;
+    MultiOneToFourIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoFour;
+    MultiOneToFourIfc#(Tuple3#(Bit#(1), Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoFour;
+    MultiOneToFourIfc#(Tuple2#(Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoFour;
 
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) write_reqQ <- mkFIFOLI;
+    FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
     
-    Vector#(4, DividedBRAMFIFOIfc#(Bit#(128), 100, 5)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 50 Size and 5 steps (like FIFOLI)
+    Vector#(4, DividedBRAMFIFOIfc#(Bit#(128), 100000, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
 
+    FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
+    FIFO#(Bit#(16)) hashtable_cmdQ <- mkFIFO;
+    FIFO#(Bit#(1)) sub_hashtable_cmdQ <- mkFIFO;
+    FIFO#(Bit#(32)) sub_hashtable_dataQ <- mkFIFO;
+    Reg#(Bit#(3)) hasht_handle <- mkReg(0);
+    Reg#(Bit#(3)) sub_hasht_handle <- mkReg(0);
+
+    DeSerializerIfc#(32, 4) deserial_hasht <- mkDeSerializer;
+    DeSerializerIfc#(32, 4) deserial_sub_hasht <- mkDeSerializer;
     DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
+
     TokenizerIfc tokenizer <- mkTokenizer;
+
     Vector#(4, DetectorIfc) detector;
     detector[0] <- mkDetector(0);
     detector[1] <- mkDetector(1);
@@ -57,6 +61,13 @@ module mkHwMain#(PcieUserIfc pcie)
         let w <- pcie.dataReceive;
         let a = w.addr;
         let d = w.data;
+        pcie_reqQ.enq(tuple2(a, d));
+    endrule
+
+    rule getPCIeData;
+        pcie_reqQ.deq;
+        Bit#(20) a = tpl_1(pcie_reqQ.first);
+        Bit#(32) d = tpl_2(pcie_reqQ.first);
 
         let off = (a>>2);
         if ( off == 0 ) begin
@@ -64,37 +75,26 @@ module mkHwMain#(PcieUserIfc pcie)
         end else if (off == 1) begin // Log Data In
             deserial_pcieio.put(d);
         end else if (off == 2) begin // Read Normal Hash Table fromt the DMA
-            dma_handleQ.enq(1);
+            hashtable_dataQ.enq(d);
         end else if (off == 3) begin // 12
-            dma_handleQ.enq(2);
-        end else begin // write req 15,16,17,18
+            sub_hashtable_dataQ.enq(d);
+        end else begin // write req 15,16,32,48
             write_reqQ.enq(tuple2(off >> 2, d));
         end
     endrule
 
-    rule dmaReadRequest(wordReadLeft == 0);
-        dma_handleQ.deq;
-        Bit#(2) handle = dma_handleQ.first;
-        case (handle)
-            1 : pcie.dmaReadReq(0, 512); 
-            2 : pcie.dmaReadReq(1000, 512); 
-        endcase
-        wordReadLeft <= 512;
-        dma_handle <= handle;
-    endrule
-
+    /* Send Output To The Host */
     rule recWriteRequest(write_target_number == write_cnt);
         write_reqQ.deq;
         Bit#(32) off = zeroExtend(tpl_1(write_reqQ.first));
         Bit#(10) step = truncate(tpl_2(write_reqQ.first));
         Bit#(2) idx = truncate(off);
 
-        pcie.dmaWriteReq(off * 100, step); // each 4 module has 100 x 128 Bits DMA space
+        pcie.dmaWriteReq(off * 1000, step); // each 4 module has 1000 x 128 Bits DMA space
 
         write_target_number <= step;
         write_handle <= idx;
     endrule
-
     rule writeDMA(write_target_number != write_cnt);
         Bit#(2) idx = write_handle;
         outputQ[idx].deq;
@@ -109,85 +109,95 @@ module mkHwMain#(PcieUserIfc pcie)
         end
     endrule
 
-    rule recvHashTable(wordReadLeft != 0 && dma_handle == 1); // receive HashTable from the HOST
-        DMAWord rd <- pcie.dmaReadWord;
-        Bit#(1) handle = table_merge_handle;
-        Bit#(144) merged = hash_table_data;
-        if (handle == 0) begin // 0 => 128Bits word, 1 => 8Bits valbit
-            merged[143:16] = rd;
+    /* Get Hash Table Data From The Host */
+    rule mergeHashTableData;
+        hashtable_dataQ.deq;
+        Bit#(32) d = hashtable_dataQ.first;
+        if (hasht_handle < 4) begin
+            deserial_hasht.put(d);
+            hasht_handle <= hasht_handle + 1;
         end else begin
-            merged[15:0] = rd[127:112];
-            hashtableQ.enq(merged);
+            hashtable_cmdQ.enq(truncate(d));
+            hasht_handle <= 0;
         end
-        hash_table_data <= merged;
-        table_merge_handle <= table_merge_handle + 1;
-        wordReadLeft <= wordReadLeft - 1;
+    endrule
+    rule getHashTableData;
+        hashtable_cmdQ.deq;
+        Bit#(128) d <- deserial_hasht.get;
+        Bit#(16) cmd = hashtable_cmdQ.first;
+        Bit#(144) merged = zeroExtend(d);
+        merged = merged << 16;
+        merged = merged | zeroExtend(cmd);
+        hashtableQ.enq(merged);
     endrule
 
-    rule recvHashSubTable(wordReadLeft != 0 && dma_handle == 2); // receive SubHashTable from the HOST
-        DMAWord rd <- pcie.dmaReadWord;
-        Bit#(1) handle = sub_table_merge_handle;
-        Bit#(129) merged = sub_hash_table_data;
-        if (handle == 0) begin // 0 => 128Bits word, 1 => 1Bit valbit
-            merged[128:1] = rd;
+    /* Get Sub Hashtable Data From the Host */
+    rule mergeSubHashTableData;
+        sub_hashtable_dataQ.deq;
+        Bit#(32) d = sub_hashtable_dataQ.first;
+        if (sub_hasht_handle < 4) begin
+            deserial_sub_hasht.put(d);
+            sub_hasht_handle <= sub_hasht_handle + 1;
         end else begin
-            if (rd == 0)
-                merged[0] = 0;
-            else
-                merged[0] = 1;
-            sub_hashtableQ.enq(merged);
+            sub_hashtable_cmdQ.enq(truncate(d));
+            sub_hasht_handle <= 0;
         end
-        sub_hash_table_data <= merged;
-        sub_table_merge_handle <= sub_table_merge_handle + 1;
-        wordReadLeft <= wordReadLeft - 1;
+    endrule
+    rule getSubHashTableData;
+        sub_hashtable_cmdQ.deq;
+        Bit#(128) d <- deserial_sub_hasht.get;
+        Bit#(1) cmd = sub_hashtable_cmdQ.first;
+        Bit#(129) merged = zeroExtend(d);
+        merged = merged << 1;
+        merged = merged | zeroExtend(cmd);
+        sub_hashtableQ.enq(merged);
     endrule
 
-    rule getHashFromTheHost;
-        hashtableQ.deq;
-        put_hashQ[0].enq(hashtableQ.first);
-        put_hashQ[1].enq(hashtableQ.first);
-    endrule
 
-    for (Bit#(4) i = 0; i < 2; i = i + 1) begin
+    /* Put HashTable Data */
+    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
         rule putHash;
-            put_hashQ[i].deq;
-            detector[i * 2].put_table(hashtableQ.first);
-            detector[i * 2 + 1].put_table(hashtableQ.first);
+            let d <- hashtableQ.get[i].get;
+            detector[i].put_table(d);
         endrule
     end
-
-    rule getSubHash;
-        sub_hashtableQ.deq;
-        put_sub_hashQ[0].enq(sub_hashtableQ.first);
-        put_sub_hashQ[1].enq(sub_hashtableQ.first);
-    endrule
-
-    for (Bit#(4) i = 0; i < 2; i = i + 1) begin
+    /* Put SubHashTable Data */
+    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
         rule putSubHash;
-            put_sub_hashQ[i].deq;
-            detector[i * 2].put_sub_table(sub_hashtableQ.first);
-            detector[i * 2 + 1].put_sub_table(sub_hashtableQ.first);
+            let d <- sub_hashtableQ.get[i].get;
+            detector[i].put_sub_table(d);
         endrule
     end
 
+    /* Put 128Bits Log Data To Tokenizer */
     rule toTokenizingBridge; // Maximum word length is 8 (8 bytes)
         Bit#(64) d <- deserial_pcieio.get;
         tokenizer.put(d);
     endrule
 
-    rule putHashToDetectorBridge; // Get Hash data From the Tokenizer
-        Tuple4#(Bit#(1), Bit#(1), Bit#(8), Bit#(8)) d <- tokenizer.get_hash;
-        for (Bit#(4) i = 0; i < 4; i = i + 1) begin
-            detector[i].put_hash(d);
-        end
+    /* Word -> Detector */
+    rule getWordFromTokenizer; // Get Hash data From the Tokenizer
+        Tuple3#(Bit#(1), Bit#(1), Bit#(128)) d <- tokenizer.get_word;
+        put_wordQ.enq(d);
     endrule
-
-    rule putWordToDetector;
-        Bit#(128) d <- tokenizer.get_word; //Get Word From the Toknizer
-        for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+        rule putWordToDetector;
+            Tuple3#(Bit#(1), Bit#(1), Bit#(128)) d <- put_wordQ.get[i].get; //Get Word From the Toknizer
             detector[i].put_word(d);
-        end
+        endrule
+    end
+
+    /* Hash -> Detector */
+    rule getHashFromTokenizer;
+        Tuple2#(Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
+        put_hashQ.enq(d);
     endrule
+    for (Bit#(4) i = 0; i < 4; i = i + 1) begin //Put Word to Detector
+        rule putWord;
+            Tuple2#(Bit#(8), Bit#(8)) d <- put_hashQ.get[i].get;
+            detector[i].put_hash(d);
+        endrule
+    end
 
     for (Bit#(4) i = 0; i < 4; i = i + 1) begin
         rule getResult;
