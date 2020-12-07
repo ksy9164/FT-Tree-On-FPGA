@@ -37,13 +37,29 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
     Vector#(2, Reg#(Bit#(8))) sub_link <- replicateM(mkReg(0));
     Vector#(2, Reg#(Bit#(256))) current_line_hit <- replicateM(mkReg(0));
     Vector#(2, Reg#(Bit#(1))) current_status <- replicateM(mkReg(1));
-    Reg#(Bit#(256)) answer_table <- mkReg(0);
+    Bit#(256) answer_t = 0;
+    answer_t[125] = 1;
+    answer_t[233] = 1;
+    answer_t[239] = 1;
+    answer_t[172] = 1;
+    answer_t[66] = 1;
+    answer_t[230] = 1;
+    answer_t[41] = 1;
+    answer_t[112] = 1;
+    answer_t[70] = 1;
+    answer_t[71] = 1;
+    answer_t[59] = 1;
+    answer_t[198] = 1;
+    answer_t[158] = 1;
+    answer_t[91] = 1;
+
+    Reg#(Bit#(256)) answer_table <- mkReg(answer_t);
 
     Reg#(Bit#(2)) output_handle <- mkReg(0);
     Reg#(Bit#(2)) word_remain_handle <- mkReg(0);
     Reg#(Bit#(1)) template_flag <- mkReg(0);
     Reg#(Bit#(8)) bram_main_addr <- mkReg(0);
-    Reg#(Bit#(8)) bram_sub_addr <- mkReg(0);
+    Reg#(Bit#(8)) bram_sub_addr <- mkReg(1);
 
     for (Bit#(8) i = 0; i < 2; i = i + 1) begin
         rule readReq;
@@ -61,8 +77,8 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
             Bit#(128) word = wordQ[i].first;
             Bit#(138) d <- bram_main[i].get;
             Bit#(128) table_word = d[137:10];
-            Bit#(8) link = d[9:2];
-            Bit#(2) flag = d[1:0]; // (Valid, Should/or Not)
+            Bit#(8) link = d[7:0];
+            Bit#(2) flag = d[9:8]; // (Valid, Should/or Not)
             Bit#(1) wordflag = wordflagQ[i].first;
 
             if (word == table_word) begin // Word matching
@@ -73,8 +89,6 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
                     sub_link[i] <= link;
                     bram_sub[i].read_req(link);
                     compare_handle[i] <= 1;
-                    /* compareQ[i].enq(0); // for testing
-                     * compare_handle[i] <= 2; */
                 end
             end else if (wordflag == 1)begin // Word unmatching
                 compareQ[i].enq(0);
@@ -178,6 +192,9 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
         detectionQ.deq;
         template_flag <= detectionQ.first;
         output_handle <= 1;
+        if (template_flag == 1) begin
+            outputQ.enq(10);
+        end
     endrule
 
     rule outputRule(output_handle == 1); // Normal status

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <bitset>
 
 #include "bdbmpcie.h"
 
@@ -17,6 +18,7 @@ const char hash_file_name[100] = "./data/bgl2_hash.txt";
 const char sub_hash_file_name[100] = "./data/bgl2_subtable.txt";
 
 using namespace std;
+typedef bitset<128> bs128;
 
 int main(int argc, char** argv) {
     BdbmPcie* pcie = BdbmPcie::getInstance();
@@ -26,7 +28,7 @@ int main(int argc, char** argv) {
     table_stream.open(hash_file_name);
     int idx = 0;
     int val = 0;
-    int i,j;
+    int i,j,k;
 
     printf("Hash upload!\n");
     fflush(stdout);
@@ -36,6 +38,7 @@ int main(int argc, char** argv) {
             uint32_t d = 0;
             table_stream >> arr[j];
         }
+
         for (j = 3; j >= 0; j--) {
             pcie->userWriteWord(8, arr[j]);
         }
@@ -75,6 +78,7 @@ int main(int argc, char** argv) {
     fflush(stdout);
 
     FILE *fin = fopen(log_file_name[0], "rb");
+    /* FILE *fin = fopen("tempdata.txt", "rb"); */
     uint32_t file_size = 0;
     uint32_t buff_size = 0;
 
