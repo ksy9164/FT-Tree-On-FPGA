@@ -103,7 +103,7 @@ module mkTokenizer8bits (Tokenizer8bitsIfc);
             hashQ.enq(hash);
         end else begin
             hash_a <= cuckoohash_1(hash[0], d);
-            hash_b <= cuckoohash_1(hash[1], d);
+            hash_b <= cuckoohash_2(hash[1], d);
         end
     endrule
 
