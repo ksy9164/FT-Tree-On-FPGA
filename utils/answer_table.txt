@@ -1,0 +1,91 @@
+
+Template No.9
+
+answer_t[125] = 1;
+answer_t[233] = 1;
+answer_t[239] = 1;
+answer_t[122] = 1;
+answer_t[131] = 1;
+answer_t[33] = 1;
+answer_t[169] = 1;
+answer_t[142] = 1;
+answer_t[162] = 1;
+answer_t[46] = 1;
+answer_t[219] = 1;
+answer_t[19] = 1;
+answer_t[254] = 1;
+answer_t[212] = 1;
+answer_t[215] = 1;
+answer_t[53] = 1;
+answer_t[87] = 1;
+answer_t[86] = 1;
+answer_t[157] = 1;
+answer_t[134] = 1;
+answer_t[128] = 1;
+
+Template No.21
+
+answer_t[125] = 1;
+answer_t[233] = 1;
+answer_t[239] = 1;
+answer_t[122] = 1;
+answer_t[113] = 1;
+answer_t[33] = 1;
+answer_t[92] = 1;
+answer_t[169] = 1;
+answer_t[142] = 1;
+answer_t[162] = 1;
+answer_t[237] = 1;
+answer_t[139] = 1;
+answer_t[111] = 1;
+answer_t[167] = 1;
+answer_t[251] = 1;
+answer_t[200] = 1;
+answer_t[114] = 1;
+answer_t[16] = 1;
+answer_t[5] = 1;
+answer_t[193] = 1;
+answer_t[201] = 1;
+
+Template No.28
+
+answer_t[125] = 1;
+answer_t[233] = 1;
+answer_t[239] = 1;
+answer_t[122] = 1;
+answer_t[113] = 1;
+answer_t[33] = 1;
+answer_t[169] = 1;
+answer_t[142] = 1;
+answer_t[162] = 1;
+answer_t[46] = 1;
+answer_t[219] = 1;
+answer_t[237] = 1;
+answer_t[19] = 1;
+answer_t[254] = 1;
+answer_t[212] = 1;
+answer_t[215] = 1;
+answer_t[53] = 1;
+answer_t[87] = 1;
+answer_t[86] = 1;
+answer_t[32] = 1;
+answer_t[234] = 1;
+answer_t[193] = 1;
+answer_t[174] = 1;
+
+Template No.34
+
+answer_t[125] = 1;
+answer_t[233] = 1;
+answer_t[239] = 1;
+answer_t[172] = 1;
+answer_t[66] = 1;
+answer_t[230] = 1;
+answer_t[41] = 1;
+answer_t[112] = 1;
+answer_t[70] = 1;
+answer_t[71] = 1;
+answer_t[59] = 1;
+answer_t[198] = 1;
+answer_t[158] = 1;
+answer_t[91] = 1;

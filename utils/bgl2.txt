@@ -1,0 +1,93 @@
+1 <root> RAS - KERNEL INFO
+2 <root> RAS - KERNEL FATAL
+3 <root> RAS - INFO on
+4 <root> RAS - INFO NULL MMCS idoproxydb has been
+5 <root> RAS - INFO NULL MMCS has been
+6 <root> RAS - INFO NULL MMCS 2005.07.07 has been ciodb restarted. 2005-07-07-16.03.57.536861 1120777437
+7 <root> RAS - INFO NULL MMCS 2005.07.26 has been started all --dbproperties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server serverdb.properties 2005-07-26-15.20.22.018120 1122416422
+8 <root> RAS - INFO NULL 2005.06.11 MMCS idoproxydb has been started db.properties parameters Input BlueGene1 -loguserinfo -enableflush $Name $ DRV142_2005 2005-06-11-23.39.55.755393 1118558395
+9 <root> RAS - INFO NULL 2005.06.11 MMCS has been started all --dbproperties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server serverdb.properties 1118558396 2005-06-11-23.39.56.159912
+10 <root> RAS - INFO NULL 2005.06.11 MMCS has been ciodb restarted. 1118558396 2005-06-11-23.39.56.165228
+11 <root> RAS - INFO NULL has been
+12 <root> RAS - INFO NULL 2005.09.20 has been started BGLMASTER bglmaster.init BGLMaster 32035 127.0.0.1 ./BGLMaster --consoleport --consoleip --configfile y --autorestart 2005-09-20-10.32.43.511395 1127237563
+13 <root> RAS - INFO NULL 2005.09.20 has been started BGLMASTER bglmaster.init BGLMaster 32035 127.0.0.1 ./BGLMaster --consoleport --consoleip --configfile y --autorestart 1127248652 2005-09-20-13.37.32.090764
+14 <root> RAS - INFO NULL 2005.09.20 MMCS idoproxydb has been started db.properties parameters Input BlueGene1 -loguserinfo -enableflush $Name $ V1R1M0_250_2005 1127237564 2005-09-20-10.32.44.163801
+15 <root> RAS - INFO NULL 2005.09.20 MMCS idoproxydb has been started db.properties parameters Input BlueGene1 -loguserinfo -enableflush $Name $ V1R1M0_250_2005 1127248652 2005-09-20-13.37.32.562908
+16 <root> RAS - INFO NULL 2005.09.20 MMCS has been ciodb restarted. 1127237564 2005-09-20-10.32.44.975200
+17 <root> RAS - INFO NULL 2005.09.20 MMCS has been ciodb restarted. 1127248652 2005-09-20-13.37.32.780098
+18 <root> RAS - INFO NULL 2005.09.20 MMCS has been started all --dbproperties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 serverdb.properties --shutdown-timeout 2005-09-20-10.32.45.035813 1127237565
+19 <root> RAS - INFO NULL 2005.09.20 MMCS has been started all --dbproperties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 serverdb.properties --shutdown-timeout 1127248652 2005-09-20-13.37.32.772326
+20 <root> RAS - INFO NULL 2005.12.01 has been started --dbproperties db.properties BGLMASTER bglmaster.init BGLMaster 32035 127.0.0.1 ./BGLMaster --consoleport --consoleip --configfile y --autorestart /u/bgdb2cli/sqllib/db2profile --db2profile 1133443063 2005-12-01-05.17.43.002108
+21 <root> RAS - INFO NULL 2005.12.01 MMCS idoproxydb has been started db.properties parameters Input BlueGene1 -loguserinfo -enableflush $Name $ V1R2M0_480_2005 1133443063 2005-12-01-05.17.43.579735
+22 <root> RAS - INFO NULL 2005.12.01 MMCS idoproxydb has been started db.properties parameters Input BlueGene1 -loguserinfo -enableflush $Name $ V1R2M0_480_2005 2005-12-01-10.31.01.608992 1133461861
+23 <root> RAS - INFO NULL 2005.12.01 MMCS has been ciodb restarted. 1133443063 2005-12-01-05.17.43.580406
+24 <root> RAS - INFO NULL 2005.12.01 MMCS has been ciodb restarted. 2005-12-01-07.56.38.469152 1133452598
+25 <root> RAS - INFO NULL 2005.12.01 MMCS has been ciodb restarted. 1133457435 2005-12-01-09.17.15.840937
+26 <root> RAS - INFO NULL 2005.12.01 MMCS has been ciodb restarted. 2005-12-01-10.31.06.632575 1133461866
+27 <root> RAS - INFO NULL 2005.12.01 MMCS has been ciodb restarted. 1133494221 2005-12-01-19.30.21.083279
+28 <root> RAS - INFO NULL 2005.12.01 MMCS has been started all --dbproperties db.properties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 --shutdown-timeout 1133443063 2005-12-01-05.17.43.621984
+29 <root> RAS - INFO NULL 2005.12.01 MMCS has been started all --dbproperties db.properties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 --shutdown-timeout 2005-12-01-10.26.18.495244 1133461578
+30 <root> RAS - INFO NULL 2005.12.01 MMCS has been started all --dbproperties db.properties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 --shutdown-timeout 2005-12-01-10.31.11.621781 1133461871
+31 <root> RAS - INFO NULL 2005.12.01 MMCS has been started all --dbproperties db.properties mmcs_db_server BGL /bgl/BlueLight/logs/BGL --useDatabase --reconnect-blocks --iolog ./mmcs_db_server 120 --shutdown-timeout 2005-12-01-10.50.03.079143 1133463003
+32 <root> RAS - INFO 2005.06.14 on bit 3 R27-M1-L3-U18-C LINKCARD sparing performing MidplaneSwitchController 2005-06-14-09.25.02.879326 1118766302
+33 <root> RAS - INFO 2005.06.14 on bit 3 R27-M1-L3-U18-C LINKCARD sparing performing MidplaneSwitchController 2005-06-14-09.46.16.629388 1118767576
+34 <root> RAS - INFO 2005.06.14 on bit 3 R27-M1-L3-U18-C LINKCARD sparing performing MidplaneSwitchController 2005-06-14-10.10.32.735630 1118769032
+35 <root> RAS - INFO 2005.06.14 on bit 3 R27-M1-L3-U18-C LINKCARD sparing performing MidplaneSwitchController 2005-06-14-11.37.14.817885 1118774234
+36 <root> RAS - INFO 2005.07.09 on bit 3 LINKCARD sparing performing MidplaneSwitchController R33-M1-L0-U22-C
+37 <root> RAS - INFO 2005.07.09 on bit 3 R27-M1-L3-U18-C LINKCARD sparing performing MidplaneSwitchController
+38 <root> RAS - FATAL
+39 <root> RAS - 0 NULL 2005.07.19 code with FAILURE ciodb BGLMASTER exited normally exit 2005-07-19-10.55.37.184548 1121795737
+40 <root> RAS - 0 NULL 2005.08.02 code with FAILURE BGLMASTER exited idoproxy normally exit 1123031132 2005-08-02-18.05.32.652047
+41 <root> RAS - NULL ERROR MMCS 2005.07.20 timeout Ido packet 1121876849 2005-07-20-09.27.29.806238
+42 <root> RAS - NULL ERROR MMCS 2005.08.03 timeout Ido packet
+43 <root> RAS - NULL ERROR MMCS timeout 2005.08.04 Ido packet 2005-08-04-15.31.24.560917 1123194684
+44 <root> RAS - NULL ERROR MMCS timeout Ido packet
+45 <root> RAS - NULL ERROR MMCS timeout Ido 2005.08.09 packet 2005-08-09-08.18.46.919579 1123600726
+46 <root> RAS - NULL ERROR MMCS timeout Ido 2005.08.09 packet 2005-08-09-08.18.57.119378 1123600737
+47 <root> RAS - NULL ERROR MMCS timeout Ido 2005.08.09 packet 1123607122
+48 <root> RAS - NULL ERROR MMCS timeout Ido 2005.08.09 packet 1123607123
+49 <root> RAS - NULL ERROR MMCS timeout Ido 2005.08.09 packet 2005-08-09-10.05.32.145633 1123607132
+50 <root> RAS - NULL ERROR 2005.09.20 MMCS timeout Ido packet
+51 <root> RAS - NULL Source ASSERT ERROR MMCS idoproxydb hit condition Function=int line=1043 file=idotransportmgr.cpp expression=0 IdoTransportMgrSendPacket(IdoUdpMgr*, BglCtlPavTrace*) 2005.08.03
+52 <root> RAS - NULL Source ASSERT ERROR MMCS idoproxydb hit condition Function=int 2005.08.04 > file=idomarshalerio.cpp 0x10000) line=1929 expression=!(nMsgLen IdoMarshalerRecvBufferReadBlock(IdoMsgIdoMsgHdr*&) 2005-08-04-16.54.44.397662 1123199684
+53 <root> RAS - NULL Source ASSERT ERROR MMCS idoproxydb hit condition Function=int 2005.08.04 > file=idomarshalerio.cpp 0x10000) line=1929 expression=!(nMsgLen IdoMarshalerRecvBufferReadBlock(IdoMsgIdoMsgHdr*&) 2005-08-04-17.04.40.256486 1123200280
+54 <root> RAS - NULL Source ASSERT ERROR MMCS idoproxydb hit condition Function=int 2005.11.07 line=353 file=idoclientmgr.cpp expression=pTargetMgr char*) IdoClientMgrTargetClose(const
+55 <root> RAS - NULL Source ASSERT ERROR MMCS idoproxydb hit condition 2005.08.04 > file=idomarshalerio.cpp 0x10000) line=387 int expression=!(RecvMsgHdr.ulLen IdoMarshalerIoRunRecv() Function=virtual 2005-08-04-17.38.53.676475 1123202333
+56 <root> RAS - NULL Source ASSERT ERROR 2005.09.20 MMCS idoproxydb hit condition Function=int line=1043 file=idotransportmgr.cpp expression=0 IdoTransportMgrSendPacket(IdoUdpMgr*, BglCtlPavTrace*)
+57 <root> RAS KERNEL INFO the card
+58 <root> RAS KERNEL INFO the 2005.06.11 card R16-M1-N2-CJ17-U01 ddr replacing consider soft failures, excessive R_DDR_EXC 2005-06-11-15.19.29.120248 1118528369
+59 <root> RAS KERNEL INFO the 2005.06.11 card R03-M0-NB-CJ10-U11 ddr replacing consider soft failures, excessive R_DDR_EXC 1118536801 2005-06-11-17.40.01.735660
+60 <root> RAS KERNEL INFO 2005.06.14 the card R01-M1-ND-CJ15-U11 ddr replacing consider soft failures, excessive R_DDR_EXC 2005-06-14-01.52.42.005562 1118739162
+61 <root> RAS KERNEL INFO 2005.06.14 the card R16-M1-N2-CJ17-U01 ddr replacing consider soft failures, excessive R_DDR_EXC 2005-06-14-21.08.23.924448 1118808503
+62 <root> RAS KERNEL FATAL
+63 <root> RAS FATAL
+64 <root> RAS NULL 2005.06.28 code with FAILURE 13 BGLMASTER exited mmcs_server normally exit MASNORM 2005-06-28-13.53.21.974236 1119992001
+65 <root> RAS NULL to
+66 <root> RAS NULL 1 2005.08.02 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 2005-08-02-17.18.18.545821 1123028298
+67 <root> RAS NULL 1 2005.08.12 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 2005-08-12-11.56.58.689783 1123873018
+68 <root> RAS NULL 1 2005.08.17 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 1124308141 2005-08-17-12.49.01.000102
+69 <root> RAS NULL 1 2005.08.17 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 1124312390 2005-08-17-13.59.50.444171
+70 <root> RAS NULL 1 2005.11.01 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 2005-11-01-10.01.22.495664 1130868082
+71 <root> RAS NULL 15 2005.08.02 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 1123031142 2005-08-02-18.05.42.661358
+72 <root> RAS NULL 15 2005.08.02 code with FAILURE ciodb BGLMASTER exited normally exit MASNORM 1123031147 2005-08-02-18.05.47.668332
+73 <root> RAS NULL 15 2005.08.03 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 1123101291 2005-08-03-13.34.51.000398
+74 <root> RAS NULL 15 2005.08.10 code with FAILURE BGLMASTER exited mmcs_server normally exit MASNORM 1123690198 2005-08-10-09.09.58.139632
+75 <root> RAS NULL 2005.12.01 to FAILURE ciodb BGLMASTER exited signal due abnormally MASABNORM Aborted 2005-12-01-07.56.37.949915 1133452597
+76 <root> RAS NULL 2005.12.01 to FAILURE ciodb BGLMASTER exited signal due abnormally MASABNORM Aborted 1133457435 2005-12-01-09.17.15.257476
+77 <root> RAS NULL 2005.12.01 to FAILURE ciodb BGLMASTER exited signal due abnormally MASABNORM Aborted 1133494220 2005-12-01-19.30.20.365297
+78 <root> -
+79 <root> NULL is and not stopping FAILURE MONITOR caught 2005.07.29 power module present R06-M1-NF monitor U69 MONPOW java.lang.UnsupportedOperationException 1122649272 2005-07-29-08.01.12.850473
+80 <root> NULL is and not stopping 2005.09.23 FAILURE MONITOR caught power module R44-M1-N9 present monitor U68 MONPOW java.lang.UnsupportedOperationException 1127485836 2005-09-23-07.30.36.219430
+81 <root> NULL is and 2005.11.18 stopping FAILURE MONITOR caught java.lang.IllegalStateException while executing Operation monitor R03-M1-N7 CONTROL 1132329481 java.io.EOFException MONILL 2005-11-18-07.58.01.819883
+82 <root> NULL into FAILURE MONITOR caught While 2005.07.29 R06-M1-NF monitor info DB java.lang.NullPointerException inserting MONNULL 1122649272 2005-07-29-08.01.12.902379
+83 <root> NULL into 2005.09.23 FAILURE MONITOR caught While R44-M1-N9 monitor info DB java.lang.NullPointerException inserting MONNULL 1127485836 2005-09-23-07.30.36.422247
+84 <root> NULL on detected node status 2005.09.19 FAILURE MONITOR power module R73-M0-ND MONPOW fault registers card. are 2005-09-19-14.15.20.338022 1127164520 0/0/1/1
+85 <root> NULL on detected node status 2005.11.17 FAILURE MONITOR power module R73-M1-N7 MONPOW fault registers card. are 2005-11-17-08.00.32.043074 1132243232 0/1/1/0
+86 <root> NULL on detected node status 2005.11.18 FAILURE MONITOR power module R03-M1-NC MONPOW fault registers card. are 0/1/0/0 2005-11-18-06.27.46.304582 1132324066
+87 <root> NULL on detected node status 2005.11.18 FAILURE MONITOR power module R07-M1-NE MONPOW fault registers card. are 0/1/0/0 2005-11-18-06.28.04.751930 1132324084
+88 <root> NULL on No card 2005.11.07 found link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-07-12.28.07.381935 1131395287
+89 <root> NULL on No card 2005.11.07 found link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-07-12.28.57.195352 1131395337
+90 <root> NULL on No card 2005.11.07 found link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-07-12.37.48.945594 1131395868
+91 <root> NULL on No card 2005.11.07 found link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-07-14.11.44.893548 1131401504
+92 <root> NULL on No card 2005.11.07 found link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-07-14.38.47.620182 1131403127
+93 <root> NULL on No card found 2005.11.11 link FAILURE MONITOR R63-M0-L2 power module U58 MONPOW 2005-11-11-10.48.26.765719 1131734906
