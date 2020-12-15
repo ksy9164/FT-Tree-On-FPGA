@@ -44,6 +44,8 @@ module mkTokenizer8bits (Tokenizer8bitsIfc);
     Reg#(Bit#(8)) hash_a <- mkReg(0);
     Reg#(Bit#(8)) hash_b <- mkReg(33);
 
+    Reg#(Bit#(1)) token_handle <- mkReg(0);
+
     SerializerIfc#(64, 8) serial_inputQ <- mkSerializer; 
 
     rule serial8Bits;
@@ -58,7 +60,7 @@ module mkTokenizer8bits (Tokenizer8bitsIfc);
         toHashingQ.enq(serialized);
     endrule
 
-    rule doTokenizing;
+    rule doTokenizing(token_handle == 0);
         toTokenizingQ.deq;
         Bit#(8) d = toTokenizingQ.first;
 
@@ -81,13 +83,34 @@ module mkTokenizer8bits (Tokenizer8bitsIfc);
             token_buff <= 0;
             char_cnt <= 0;
             wordQ.enq(t_buff);
-            wordendQ.enq(0);
+            token_handle <= 1;
+            /* wordendQ.enq(0); */
         end else begin
             t_buff = (t_buff << 8) | zeroExtend(d);
 
             token_buff <= t_buff;
             char_cnt <= char_cnt + 1;
         end
+    endrule
+
+    rule bytes16Exception(token_handle == 1);
+        Bit#(8) d = toTokenizingQ.first;
+        toTokenizingQ.deq;
+        if (d == 32 || d == 10) begin
+            token_buff <= 0;
+            char_cnt <= 0;
+            wordendQ.enq(1);
+            if (d == 10) begin
+                linespaceQ.enq(1);
+            end else begin
+                linespaceQ.enq(0);
+            end
+        end else begin
+            wordendQ.enq(0);
+            token_buff <= zeroExtend(d);
+            char_cnt <= 1;
+        end
+        token_handle <= 0;
     endrule
 
     rule doHash;

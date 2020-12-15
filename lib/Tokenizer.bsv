@@ -44,6 +44,8 @@ module mkTokenizer (TokenizerIfc);
     Reg#(Bit#(8)) hash_a <- mkReg(0);
     Reg#(Bit#(8)) hash_b <- mkReg(33);
 
+    Reg#(Bit#(1)) token_handle <- mkReg(0);
+
     SerializerIfc#(64, 4) serial_inputQ <- mkSerializer; 
 
     rule serial16Bits;
@@ -63,7 +65,7 @@ module mkTokenizer (TokenizerIfc);
         toHashingQ.enq(d);
     endrule
 
-    rule doTokenizing;
+    rule doTokenizing(token_handle == 0);
         toTokenizingQ.deq;
         Vector#(2, Bit#(8)) d = toTokenizingQ.first;
         Bit#(4) cnt = char_cnt;
@@ -99,7 +101,7 @@ module mkTokenizer (TokenizerIfc);
             token_buff <= 0;
             char_cnt <= 0;
             wordQ.enq(t_buff);
-            wordendQ.enq(0);
+            token_handle <= 1;
 
         end else if (cnt == 15) begin
             t_buff = (t_buff << 8) | zeroExtend(d[0]);
@@ -114,6 +116,24 @@ module mkTokenizer (TokenizerIfc);
             char_cnt <= cnt + 2;
 
         end
+    endrule
+
+    rule bytes16Exception(token_handle == 1);
+        Vector#(2, Bit#(8)) d = toTokenizingQ.first;
+        if (d[0] == 32 || d[0] == 10) begin
+            toTokenizingQ.deq;
+            token_buff <= zeroExtend(d[1]);
+            wordendQ.enq(1);
+            char_cnt <= 1;
+            if (d[0] == 10) begin
+                linespaceQ.enq(1);
+            end else begin
+                linespaceQ.enq(0);
+            end
+        end else begin
+            wordendQ.enq(0);
+        end
+        token_handle <= 0;
     endrule
 
     rule doHash;
