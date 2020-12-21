@@ -13,36 +13,24 @@ interface TokenizerIfc;
     method ActionValue#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) get_hash;
 endinterface
 
-function Bit#(8) rand_generator (Bit#(8) old_rand);
-    Bit#(8) a = 133;
-    Bit#(8) b = 237;
-    Bit#(8) c = 255;
-	return ((a*old_rand) + b) % c;
-endfunction
-
-function Bit#(8) cuckoohash_1 (Bit#(8) idx, Bit#(8) temp);
-	return (((idx ^ temp) * (idx + temp)) + idx);
-endfunction
-
-function Bit#(8) cuckoohash_2 (Bit#(8) idx, Bit#(8) temp);
-	Bit#(8) rd = rand_generator(idx);
-	return ((idx ^ (temp + rd)) * rd);
+function Bit#(8) cuckoohash (Bit#(8) idx, Bit#(8) temp);
+    return (idx ^ temp) * 3;
 endfunction
 
 (* synthesize *)
 module mkTokenizer (TokenizerIfc);
-    FIFOLI#(Bit#(64), 5) inputQ <- mkFIFOLI;
-    FIFO#(Vector#(2, Bit#(8))) toTokenizingQ <- mkFIFO;
-    FIFO#(Vector#(2, Bit#(8))) toHashingQ <- mkFIFO;
+    FIFO#(Bit#(64)) inputQ <- mkFIFO;
+    FIFOLI#(Vector#(2, Bit#(8)), 5) toTokenizingQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 5) toHashingQ <- mkFIFOLI;
     FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;
-    FIFOLI#(Bit#(128), 5) wordQ <- mkFIFOLI;
-    FIFOLI#(Bit#(1), 5) linespaceQ <- mkFIFOLI;
-    FIFOLI#(Bit#(1), 5) wordendQ <- mkFIFOLI;
+    FIFO#(Bit#(128)) wordQ <- mkFIFO;
+    FIFO#(Bit#(1)) linespaceQ <- mkFIFO;
+    FIFO#(Bit#(1)) wordendQ <- mkFIFO;
 
     Reg#(Bit#(128)) token_buff <- mkReg(0);
     Reg#(Bit#(4)) char_cnt <- mkReg(0);
     Reg#(Bit#(8)) hash_a <- mkReg(0);
-    Reg#(Bit#(8)) hash_b <- mkReg(33);
+    Reg#(Bit#(8)) hash_b <- mkReg(23);
 
     Reg#(Bit#(1)) token_handle <- mkReg(0);
 
@@ -145,26 +133,26 @@ module mkTokenizer (TokenizerIfc);
         hash[1] = hash_b;
 
         if (d[0] == 32 || d[0] == 10) begin // If d[0] = ' ' or '\n'
-			hash_a <= cuckoohash_1(0, d[1]);
+			hash_a <= cuckoohash(0, d[1]);
 
-			hash_b <= cuckoohash_2(33, d[1]);
+			hash_b <= cuckoohash(23, d[1]);
 
             hashQ.enq(hash);
         end else if (d[1] == 32|| d[1] == 10) begin // If d[0] = ' ' or '\n'
-			hash[0] = cuckoohash_1(hash[0], d[0]);
+			hash[0] = cuckoohash(hash[0], d[0]);
 
-			hash[1] = cuckoohash_2(hash[1], d[0]);
+			hash[1] = cuckoohash(hash[1], d[0]);
 
             hash_a <= 0;
-            hash_b <= 33;
+            hash_b <= 23;
 
             hashQ.enq(hash);
         end else begin
-			hash[0] = cuckoohash_1(hash[0], d[0]);
-			hash[0] = cuckoohash_1(hash[0], d[1]);
+			hash[0] = cuckoohash(hash[0], d[0]);
+			hash[0] = cuckoohash(hash[0], d[1]);
 
-			hash[1] = cuckoohash_2(hash[1], d[0]);
-			hash[1] = cuckoohash_2(hash[1], d[1]);
+			hash[1] = cuckoohash(hash[1], d[0]);
+			hash[1] = cuckoohash(hash[1], d[1]);
 
             hash_a <= hash[0];
             hash_b <= hash[1];
