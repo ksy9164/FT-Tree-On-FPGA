@@ -1,0 +1,3 @@
+[submodule "ft_tree"]
+	path = ft_tree
+	url = https://gitlab.com/jiyouna2/ft_tree.git
