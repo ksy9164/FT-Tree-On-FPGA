@@ -126,13 +126,6 @@ module mkHwMain#(PcieUserIfc pcie)
         Bit#(128) d <- deserial_hasht.get;
         Bit#(16) cmd = hashtable_cmdQ.first;
 
-        /* Need to Change */
-        for (Bit#(8) i = 0; i < 16; i = i + 1) begin
-            if (d[7:0] == 0) begin
-                d = d >> 8;
-            end
-        end
-
         Bit#(144) merged = zeroExtend(d);
         merged = merged << 16;
         merged = merged | zeroExtend(cmd);
@@ -154,12 +147,6 @@ module mkHwMain#(PcieUserIfc pcie)
     rule getSubHashTableData;
         sub_hashtable_cmdQ.deq;
         Bit#(128) d <- deserial_sub_hasht.get;
-        /* Need to Change */
-        for (Bit#(8) i = 0; i < 16; i = i + 1) begin
-            if (d[7:0] == 0) begin
-                d = d >> 8;
-            end
-        end
         Bit#(1) cmd = sub_hashtable_cmdQ.first;
         Bit#(129) merged = zeroExtend(d);
         merged = merged << 1;
