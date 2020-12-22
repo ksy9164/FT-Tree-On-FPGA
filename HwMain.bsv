@@ -21,25 +21,25 @@ module mkHwMain#(PcieUserIfc pcie)
     (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
     Reg#(Bit#(32)) addr <- mkReg(0);
-    Vector#(4, Reg#(Bit#(32))) output_cnt <- replicateM(mkReg(0));
+    Vector#(8, Reg#(Bit#(32))) output_cnt <- replicateM(mkReg(0));
     Reg#(Bit#(10)) write_cnt <- mkReg(0);
     Reg#(Bit#(10)) write_target_number <- mkReg(0);
 
     Reg#(Bit#(2)) write_handle <- mkReg(0);
     
     FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
-    MultiOneToFourIfc#(Bit#(144)) hashtableQ <- mkMultiOnetoFour;
-    MultiOneToFourIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoFour;
-    MultiOneToFourIfc#(Tuple2#(Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoFour;
-    MultiOneToFourIfc#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoFour;
+    MultiOneToEightIfc#(Bit#(152)) hashtableQ <- mkMultiOnetoEight;
+    MultiOneToEightIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoEight;
+    MultiOneToEightIfc#(Tuple2#(Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoEight;
+    MultiOneToEightIfc#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoEight;
 
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) write_reqQ <- mkFIFOLI;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
     
-    Vector#(4, DividedBRAMFIFOIfc#(Bit#(128), 100, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
+    Vector#(8, DividedBRAMFIFOIfc#(Bit#(128), 100, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
-    FIFO#(Bit#(16)) hashtable_cmdQ <- mkFIFO;
+    FIFO#(Bit#(24)) hashtable_cmdQ <- mkFIFO;
     FIFO#(Bit#(1)) sub_hashtable_cmdQ <- mkFIFO;
     FIFO#(Bit#(32)) sub_hashtable_dataQ <- mkFIFO;
     Reg#(Bit#(3)) hasht_handle <- mkReg(0);
@@ -51,11 +51,15 @@ module mkHwMain#(PcieUserIfc pcie)
 
     TokenizerIfc tokenizer <- mkTokenizer;
 
-    Vector#(4, DetectorIfc) detector;
+    Vector#(8, DetectorIfc) detector;
     detector[0] <- mkDetector(0);
     detector[1] <- mkDetector(1);
     detector[2] <- mkDetector(2);
     detector[3] <- mkDetector(3);
+    detector[4] <- mkDetector(4);
+    detector[5] <- mkDetector(5);
+    detector[6] <- mkDetector(6);
+    detector[7] <- mkDetector(7);
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -124,10 +128,10 @@ module mkHwMain#(PcieUserIfc pcie)
     rule getHashTableData;
         hashtable_cmdQ.deq;
         Bit#(128) d <- deserial_hasht.get;
-        Bit#(16) cmd = hashtable_cmdQ.first;
+        Bit#(24) cmd = hashtable_cmdQ.first;
 
-        Bit#(144) merged = zeroExtend(d);
-        merged = merged << 16;
+        Bit#(152) merged = zeroExtend(d);
+        merged = merged << 24;
         merged = merged | zeroExtend(cmd);
         hashtableQ.enq(merged);
     endrule
@@ -156,14 +160,14 @@ module mkHwMain#(PcieUserIfc pcie)
 
 
     /* Put HashTable Data */
-    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule putHash;
             let d <- hashtableQ.get[i].get;
             detector[i].put_table(d);
         endrule
     end
     /* Put SubHashTable Data */
-    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule putSubHash;
             let d <- sub_hashtableQ.get[i].get;
             detector[i].put_sub_table(d);
@@ -181,7 +185,7 @@ module mkHwMain#(PcieUserIfc pcie)
         Tuple2#(Bit#(1), Bit#(128)) d <- tokenizer.get_word;
         put_wordQ.enq(d);
     endrule
-    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule putWordToDetector;
             Tuple2#(Bit#(1), Bit#(128)) d <- put_wordQ.get[i].get; //Get Word From the Toknizer
             detector[i].put_word(d);
@@ -194,14 +198,14 @@ module mkHwMain#(PcieUserIfc pcie)
         put_hashQ.enq(d);
     endrule
 
-    for (Bit#(4) i = 0; i < 4; i = i + 1) begin //Put Word to Detector
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin //Put Word to Detector
         rule putWord;
             Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- put_hashQ.get[i].get;
             detector[i].put_hash(d);
         endrule
     end
 
-    for (Bit#(4) i = 0; i < 4; i = i + 1) begin
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule getResult;
             Bit#(128) d <- detector[i].get_result;
             $write("%d %s \n",i, d);

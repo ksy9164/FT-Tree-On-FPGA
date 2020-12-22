@@ -14,9 +14,9 @@ const char log_file_name[LOG_NUM][100] = { "/mnt/hdd0/data/hpc4/bgl2.log",
     "/mnt/hdd0/data/hpc4/liberty2.log",
     "/mnt/hdd0/data/hpc4/spirit2.log", 
     "/mnt/hdd0/data/hpc4/Thunderbird.log"};
-
-#define TABLE_FILE "./data/bgl2.txt"
-#define TEMPLATE_NUM 34
+//48,53,70,90
+#define TABLE_FILE "../data/string/bgl2_template.txt"
+#define TEMPLATE_NUM 90
 
 int main(void)
 {
@@ -48,7 +48,8 @@ int main(void)
             }
         }
         if (cnt >= template_data.size() - 2) {
-            cout << line_cnt << " " << line << endl;
+            cout<< line << endl;
+            /* cout << line_cnt << " " << line << endl; */
         }
         line_cnt++;
     }

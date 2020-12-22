@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
         uint32_t merged = 0;
         table_stream >> sub_hash_idx;
         table_stream >> svbits;
-        svbits = svbits >> 16;
+        svbits = svbits >> 8;
         merged = sub_hash_idx;
         merged = merged | svbits;
         pcie->userWriteWord(8, merged);
