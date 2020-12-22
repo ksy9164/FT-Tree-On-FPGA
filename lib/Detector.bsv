@@ -15,7 +15,7 @@ interface DetectorIfc;
 endinterface
 
 (* synthesize *)
-module mkDetector#(Bit#(2) module_id)(DetectorIfc);
+module mkDetector#(Bit#(3) module_id)(DetectorIfc);
     Vector#(2, BramCtlIfc#(138, 256, 8)) bram_main <- replicateM(mkBramCtl); // (128 + 8 + 2) x 256 Size BRAM
     Vector#(2, BramCtlIfc#(129, 256, 8)) bram_sub <- replicateM(mkBramCtl); // (128 + 1) x 256 Size BRAM
 
@@ -37,23 +37,168 @@ module mkDetector#(Bit#(2) module_id)(DetectorIfc);
     Vector#(2, Reg#(Bit#(8))) sub_link <- replicateM(mkReg(0));
     Vector#(2, Reg#(Bit#(256))) current_line_hit <- replicateM(mkReg(0));
     Vector#(2, Reg#(Bit#(1))) current_status <- replicateM(mkReg(1));
-    Bit#(256) answer_t = 0;
-    answer_t[125] = 1;
-    answer_t[233] = 1;
-    answer_t[239] = 1;
-    answer_t[172] = 1;
-    answer_t[66] = 1;
-    answer_t[230] = 1;
-    answer_t[41] = 1;
-    answer_t[112] = 1;
-    answer_t[70] = 1;
-    answer_t[71] = 1;
-    answer_t[59] = 1;
-    answer_t[198] = 1;
-    answer_t[158] = 1;
-    answer_t[91] = 1;
+    Bit#(256) answer_table = 0;
 
-    Reg#(Bit#(256)) answer_table <- mkReg(answer_t);
+    case (module_id)
+	    0: begin
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[236] = 1;
+	        answer_table[93] = 1;
+	        answer_table[113] = 1;
+	        answer_table[103] = 1;
+	        answer_table[104] = 1;
+	        answer_table[62] = 1;
+	        answer_table[197] = 1;
+	        answer_table[131] = 1;
+	        answer_table[134] = 1;
+	        answer_table[172] = 1;
+	        answer_table[44] = 1;
+	        answer_table[51] = 1;
+	        answer_table[84] = 1;
+	        answer_table[24] = 1;
+	        answer_table[196] = 1;
+	        answer_table[4] = 1;
+	        answer_table[96] = 1;
+	        answer_table[199] = 1;
+	        answer_table[80] = 1;
+        end
+        1: begin
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[236] = 1;
+	        answer_table[93] = 1;
+	        answer_table[79] = 1;
+	        answer_table[103] = 1;
+	        answer_table[160] = 1;
+	        answer_table[104] = 1;
+	        answer_table[62] = 1;
+	        answer_table[197] = 1;
+	        answer_table[145] = 1;
+	        answer_table[122] = 1;
+	        answer_table[148] = 1;
+	        answer_table[40] = 1;
+	        answer_table[243] = 1;
+	        answer_table[182] = 1;
+	        answer_table[87] = 1;
+	        answer_table[108] = 1;
+	        answer_table[25] = 1;
+	        answer_table[64] = 1;
+	        answer_table[76] = 1;
+        end
+        2:begin
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[236] = 1;
+	        answer_table[93] = 1;
+	        answer_table[79] = 1;
+	        answer_table[103] = 1;
+	        answer_table[104] = 1;
+	        answer_table[62] = 1;
+	        answer_table[197] = 1;
+	        answer_table[131] = 1;
+	        answer_table[134] = 1;
+	        answer_table[145] = 1;
+	        answer_table[172] = 1;
+	        answer_table[44] = 1;
+	        answer_table[51] = 1;
+	        answer_table[84] = 1;
+	        answer_table[24] = 1;
+	        answer_table[196] = 1;
+	        answer_table[4] = 1;
+	        answer_table[208] = 1;
+	        answer_table[186] = 1;
+	        answer_table[64] = 1;
+	        answer_table[86] = 1;
+        end
+        3:begin
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[236] = 1;
+	        answer_table[121] = 1;
+	        answer_table[105] = 1;
+	        answer_table[203] = 1;
+	        answer_table[153] = 1;
+	        answer_table[94] = 1;
+	        answer_table[158] = 1;
+	        answer_table[164] = 1;
+	        answer_table[163] = 1;
+	        answer_table[119] = 1;
+	        answer_table[19] = 1;
+	        answer_table[129] = 1;
+        end
+        4:begin
+
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[93] = 1;
+	        answer_table[54] = 1;
+	        answer_table[103] = 1;
+	        answer_table[147] = 1;
+	        answer_table[63] = 1;
+	        answer_table[238] = 1;
+	        answer_table[152] = 1;
+	        answer_table[228] = 1;
+        end
+        5:begin
+
+	        answer_table[98] = 1;
+	        answer_table[135] = 1;
+	        answer_table[93] = 1;
+	        answer_table[5] = 1;
+	        answer_table[194] = 1;
+	        answer_table[54] = 1;
+	        answer_table[103] = 1;
+	        answer_table[160] = 1;
+	        answer_table[149] = 1;
+	        answer_table[254] = 1;
+	        answer_table[15] = 1;
+	        answer_table[229] = 1;
+	        answer_table[123] = 1;
+	        answer_table[109] = 1;
+	        answer_table[230] = 1;
+	        answer_table[127] = 1;
+	        answer_table[202] = 1;
+	        answer_table[187] = 1;
+	        answer_table[169] = 1;
+	        answer_table[85] = 1;
+        end
+        6:begin
+	        answer_table[98] = 1;
+	        answer_table[93] = 1;
+	        answer_table[114] = 1;
+	        answer_table[35] = 1;
+	        answer_table[213] = 1;
+	        answer_table[200] = 1;
+	        answer_table[162] = 1;
+	        answer_table[219] = 1;
+	        answer_table[49] = 1;
+	        answer_table[67] = 1;
+	        answer_table[156] = 1;
+	        answer_table[151] = 1;
+	        answer_table[36] = 1;
+	        answer_table[75] = 1;
+	        answer_table[22] = 1;
+        end
+        7:begin
+	        answer_table[93] = 1;
+	        answer_table[105] = 1;
+	        answer_table[143] = 1;
+	        answer_table[206] = 1;
+	        answer_table[226] = 1;
+	        answer_table[52] = 1;
+	        answer_table[112] = 1;
+	        answer_table[162] = 1;
+	        answer_table[6] = 1;
+	        answer_table[246] = 1;
+	        answer_table[73] = 1;
+	        answer_table[216] = 1;
+	        answer_table[50] = 1;
+	        answer_table[251] = 1;
+	        answer_table[30] = 1;
+	        answer_table[101] = 1;
+        end
+    endcase
 
     Reg#(Bit#(2)) output_handle <- mkReg(0);
     Reg#(Bit#(2)) word_remain_handle <- mkReg(0);

@@ -8,33 +8,25 @@
 using namespace std;
 using namespace boost::algorithm;
 
-#define F_TABLE "./data/hash_table.txt"
-#define F_TEMPLATE "./data/bgl2.txt"
+#define F_TABLE "../data/string/bgl2_hash.txt"
+#define F_TEMPLATE "../data/string/bgl2_template.txt"
 
-uint8_t rand_generator(uint8_t old_rand) {
-    uint8_t a = 133;
-    uint8_t b = 237;
-    uint8_t c = 255;
-    return (uint8_t)((uint8_t)((uint8_t)(a*old_rand) + b) % c);
-}
-
-int hash_func1(string str){
+int hash_func1(std::string str){
     uint8_t idx = 0;
-    uint8_t temp;
-    for (auto c : str){
-        temp = (uint8_t)c;
-        idx = (uint8_t)((uint8_t)((uint8_t)(idx ^ temp) * (uint8_t)(idx + temp)) + idx);
+    for (int i = 0 ; i < str.size() ; ++i){
+        uint8_t  temp = str[i];
+        idx = idx ^ temp;
+        idx = idx * 3;
     }
     return idx;
 }
 
-int hash_func2(string str){
-    uint8_t rd,idx,temp;
-    idx = 33;
-    for (auto c : str){
-        temp = (uint8_t)c;
-        rd = rand_generator(idx);
-        idx = (uint8_t)((uint8_t)(idx ^ (uint8_t)(temp + rd)) * rd);
+int hash_func2(std::string str){
+    uint8_t idx = 23;
+    for (int i = 0 ; i < str.size() ; ++i){
+        uint8_t  temp = str[i];
+        idx = idx ^ temp;
+        idx = idx * 3;
     }
     return idx;
 }
@@ -44,7 +36,8 @@ int main(void)
 
     /* Table upload */
     ifstream tf;
-    tf.open("./data/hash_table.txt");
+    /* tf.open("./data/hash_table.txt"); */
+    tf.open(F_TABLE);
 
     string table[256];
     int i = 0;
@@ -61,7 +54,8 @@ int main(void)
 
     /* Template reading */
     ifstream in;
-    in.open("./data/bgl2.txt");
+    /* in.open("./data/bgl2.txt"); */
+    in.open(F_TEMPLATE);
 
     int cnt = 1;
     while (!in.eof()) {
@@ -72,7 +66,7 @@ int main(void)
         split(token, line, is_any_of(" "));
         uint8_t hash_a;
         uint8_t hash_b;
-        if (cnt == 9 || cnt == 21 || cnt == 28 || cnt == 34) {
+        if (cnt == 9 || cnt == 21 || cnt == 28 || cnt == 34 || cnt == 48 || cnt ==53 || cnt == 70 || cnt == 90) {
             cout << "\nTemplate No." << cnt << "\n\n";
             for (int i = 2; i < token.size(); i++) {
                 hash_a = hash_func1(token[i]);
@@ -96,7 +90,7 @@ int main(void)
                 }
 
                 if (check) {
-                    cout << "answer_t[" << (int)hash << "] = 1;" <<  endl;
+                    cout << "\tanswer_t[" << (int)hash << "] = 1;" <<  endl;
                 }
             }
         }

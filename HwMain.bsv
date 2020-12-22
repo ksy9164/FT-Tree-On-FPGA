@@ -204,10 +204,8 @@ module mkHwMain#(PcieUserIfc pcie)
     for (Bit#(4) i = 0; i < 4; i = i + 1) begin
         rule getResult;
             Bit#(128) d <- detector[i].get_result;
-            if (i == 3) begin
-                $write("%s",d);
-            end
-            outputQ[i].enq(d);
+            $write("%d %s \n",i, d);
+            /* outputQ[i].enq(d); */
             output_cnt[i] <= output_cnt[i] + 1;
         endrule
     end

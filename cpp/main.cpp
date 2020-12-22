@@ -9,13 +9,22 @@
 #include "bdbmpcie.h"
 
 #define LOG_NUM 4
+#define ID 0
+
 const char log_file_name[LOG_NUM][100] = { "/mnt/hdd0/data/hpc4/bgl2.log",
     "/mnt/hdd0/data/hpc4/liberty2.log",
     "/mnt/hdd0/data/hpc4/spirit2.log", 
     "/mnt/hdd0/data/hpc4/Thunderbird.log"};
 
-const char hash_file_name[100] = "./data/bgl2_hash.txt";
-const char sub_hash_file_name[100] = "./data/bgl2_subtable.txt";
+const char hash_file_name[LOG_NUM][100] = { "./data/bgl2_hash.txt",
+    "./data/liberty2_hash.txt",
+    "./data/spirit2_hash.txt", 
+    "./data/Thunderbird_hash.txt"};
+
+const char subtable_file_name[LOG_NUM][100] = { "./data/bgl2_subtable.txt",
+    "./data/liberty2_subtable.txt",
+    "./data/spirit2_subtable.txt", 
+    "./data/Thunderbird_subtable.txt"};
 
 using namespace std;
 typedef bitset<128> bs128;
@@ -25,7 +34,7 @@ int main(int argc, char** argv) {
 	uint8_t* dmabuf = (uint8_t*)pcie->dmaBuffer();
 
     ifstream  table_stream;
-    table_stream.open(hash_file_name);
+    table_stream.open(hash_file_name[ID]);
     int idx = 0;
     int val = 0;
     int i,j,k;
@@ -58,7 +67,7 @@ int main(int argc, char** argv) {
     printf("Sub Table upload!\n");
     fflush(stdout);
     ifstream sub_stream;
-    sub_stream.open(sub_hash_file_name);
+    sub_stream.open(subtable_file_name[ID]);
     val = 0;
     while(!sub_stream.eof()) {
         uint32_t arr[4];
@@ -77,7 +86,7 @@ int main(int argc, char** argv) {
     printf("Sub Table uploading Done!\n");
     fflush(stdout);
 
-    FILE *fin = fopen(log_file_name[0], "rb");
+    FILE *fin = fopen(log_file_name[ID], "rb");
     /* FILE *fin = fopen("tempdata.txt", "rb"); */
     uint32_t file_size = 0;
     uint32_t buff_size = 0;
