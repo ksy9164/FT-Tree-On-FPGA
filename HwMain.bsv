@@ -28,10 +28,14 @@ module mkHwMain#(PcieUserIfc pcie)
     Reg#(Bit#(2)) write_handle <- mkReg(0);
     
     FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
-    MultiOneToEightIfc#(Bit#(152)) hashtableQ <- mkMultiOnetoEight;
-    MultiOneToEightIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoEight;
-    MultiOneToEightIfc#(Tuple2#(Bit#(1), Bit#(128))) put_wordQ <- mkMultiOnetoEight;
-    MultiOneToEightIfc#(Tuple3#(Bit#(1), Bit#(8), Bit#(8))) put_hashQ <- mkMultiOnetoEight;
+    /* MultiOneToEightIfc#(Bit#(152)) hashtableQ <- mkMultiOnetoEight; */
+    /* MultiOneToEightIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoEight; */
+    /* MultiOneToEightIfc#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkMultiOnetoEight;
+     * MultiOneToEightIfc#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkMultiOnetoEight; */
+    FIFO#(Bit#(152)) hashtableQ <- mkFIFO;
+    FIFO#(Bit#(129)) sub_hashtableQ <- mkFIFO;
+    FIFO#(Tuple2#(Bit#(8), Bit#(8))) put_hashQ <- mkFIFO;
+    FIFO#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkFIFO;
 
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) write_reqQ <- mkFIFOLI;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
@@ -51,15 +55,7 @@ module mkHwMain#(PcieUserIfc pcie)
 
     TokenizerIfc tokenizer <- mkTokenizer;
 
-    Vector#(8, DetectorIfc) detector;
-    detector[0] <- mkDetector(0);
-    detector[1] <- mkDetector(1);
-    detector[2] <- mkDetector(2);
-    detector[3] <- mkDetector(3);
-    detector[4] <- mkDetector(4);
-    detector[5] <- mkDetector(5);
-    detector[6] <- mkDetector(6);
-    detector[7] <- mkDetector(7);
+    DetectorIfc detector <- mkDetector;
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -160,19 +156,18 @@ module mkHwMain#(PcieUserIfc pcie)
 
 
     /* Put HashTable Data */
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule putHash;
-            let d <- hashtableQ.get[i].get;
-            detector[i].put_table(d);
-        endrule
-    end
+    rule putHash;
+        hashtableQ.deq;
+        let d = hashtableQ.first;
+        detector.put_table(d);
+    endrule
+
     /* Put SubHashTable Data */
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule putSubHash;
-            let d <- sub_hashtableQ.get[i].get;
-            detector[i].put_sub_table(d);
-        endrule
-    end
+    rule putSubHash;
+        sub_hashtableQ.deq;
+        let d = sub_hashtableQ.first;
+        detector.put_sub_table(d);
+    endrule
 
     /* Put 128Bits Log Data To Tokenizer */
     rule toTokenizingBridge; // Maximum word length is 8 (8 bytes)
@@ -182,32 +177,31 @@ module mkHwMain#(PcieUserIfc pcie)
 
     /* Word -> Detector */
     rule getWordFromTokenizer; // Get Hash data From the Tokenizer
-        Tuple2#(Bit#(1), Bit#(128)) d <- tokenizer.get_word;
+        Tuple2#(Bit#(2), Bit#(128)) d <- tokenizer.get_word;
         put_wordQ.enq(d);
     endrule
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule putWordToDetector;
-            Tuple2#(Bit#(1), Bit#(128)) d <- put_wordQ.get[i].get; //Get Word From the Toknizer
-            detector[i].put_word(d);
-        endrule
-    end
+
+    rule putWordToDetector;
+        put_wordQ.deq;
+        Tuple2#(Bit#(2), Bit#(128)) d = put_wordQ.first; //Get Word From the Toknizer
+        detector.put_word(d);
+    endrule
 
     /* Hash -> Detector */
     rule getHashFromTokenizer;
-        Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
+        Tuple2#(Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
         put_hashQ.enq(d);
     endrule
 
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin //Put Word to Detector
-        rule putWord;
-            Tuple3#(Bit#(1), Bit#(8), Bit#(8)) d <- put_hashQ.get[i].get;
-            detector[i].put_hash(d);
-        endrule
-    end
+    rule putWord;
+        put_hashQ.deq;
+        Tuple2#(Bit#(8), Bit#(8)) d = put_hashQ.first;
+        detector.put_hash(d);
+    endrule
 
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule getResult;
-            Bit#(128) d <- detector[i].get_result;
+            Bit#(128) d <- detector.get[i].get;
             $write("%d %s \n",i, d);
             /* outputQ[i].enq(d); */
             output_cnt[i] <= output_cnt[i] + 1;
