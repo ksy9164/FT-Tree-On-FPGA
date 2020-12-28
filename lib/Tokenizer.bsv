@@ -130,26 +130,26 @@ module mkTokenizer (TokenizerIfc);
         hash[1] = hash_b;
 
         if (d[0] == 32 || d[0] == 10) begin // If d[0] = ' ' or '\n'
-			hash_a <= cuckoohash(0, d[1]);
+            hash_a <= cuckoohash(0, d[1]);
 
-			hash_b <= cuckoohash(23, d[1]);
+            hash_b <= cuckoohash(23, d[1]);
 
             hashQ.enq(hash);
         end else if (d[1] == 32|| d[1] == 10) begin // If d[0] = ' ' or '\n'
-			hash[0] = cuckoohash(hash[0], d[0]);
+            hash[0] = cuckoohash(hash[0], d[0]);
 
-			hash[1] = cuckoohash(hash[1], d[0]);
+            hash[1] = cuckoohash(hash[1], d[0]);
 
             hash_a <= 0;
             hash_b <= 23;
 
             hashQ.enq(hash);
         end else begin
-			hash[0] = cuckoohash(hash[0], d[0]);
-			hash[0] = cuckoohash(hash[0], d[1]);
+            hash[0] = cuckoohash(hash[0], d[0]);
+            hash[0] = cuckoohash(hash[0], d[1]);
 
-			hash[1] = cuckoohash(hash[1], d[0]);
-			hash[1] = cuckoohash(hash[1], d[1]);
+            hash[1] = cuckoohash(hash[1], d[0]);
+            hash[1] = cuckoohash(hash[1], d[1]);
 
             hash_a <= hash[0];
             hash_b <= hash[1];

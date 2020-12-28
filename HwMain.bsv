@@ -28,10 +28,6 @@ module mkHwMain#(PcieUserIfc pcie)
     Reg#(Bit#(2)) write_handle <- mkReg(0);
     
     FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
-    /* MultiOneToEightIfc#(Bit#(152)) hashtableQ <- mkMultiOnetoEight; */
-    /* MultiOneToEightIfc#(Bit#(129)) sub_hashtableQ <- mkMultiOnetoEight; */
-    /* MultiOneToEightIfc#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkMultiOnetoEight;
-     * MultiOneToEightIfc#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkMultiOnetoEight; */
     FIFO#(Bit#(152)) hashtableQ <- mkFIFO;
     FIFO#(Bit#(129)) sub_hashtableQ <- mkFIFO;
     FIFO#(Tuple2#(Bit#(8), Bit#(8))) put_hashQ <- mkFIFO;
@@ -153,7 +149,6 @@ module mkHwMain#(PcieUserIfc pcie)
         merged = merged | zeroExtend(cmd);
         sub_hashtableQ.enq(merged);
     endrule
-
 
     /* Put HashTable Data */
     rule putHash;
