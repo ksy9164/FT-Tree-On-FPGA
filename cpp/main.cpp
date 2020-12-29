@@ -110,10 +110,14 @@ int main(int argc, char** argv) {
     /* Put size */
     pcie->userWriteWord(0, file_size);
 
+    int cnt_f = 0;
     /* Put data */
     for (int i = 0; i < buff_size; ++i) {
         pcie->userWriteWord(4, log_data[i]);
-        /* cout << i << endl; */
+        if (buff_size > 1000) {
+            if (i % (buff_size / 1000) == 0) {
+                cout << "Progress " << ++cnt_f << endl;
+            }
     }
     printf("Data sending is done \n");
     fflush(stdout);
