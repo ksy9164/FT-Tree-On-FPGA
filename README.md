@@ -5,6 +5,7 @@ This project requires [bluespecpcie](https://github.com/sangwoojun/bluespecpcie)
 ## Install  
 ````sh 
 $ git clone https://github.com/ksy9164/FT-Tree-On-FPGA.git   
-$ git submodule init
+$ cd ./FT-Tree-On-FPGA    
+$ git submodule init   
 $ git submodule update   
 ````
