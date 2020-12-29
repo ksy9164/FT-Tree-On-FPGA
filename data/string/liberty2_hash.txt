@@ -1,1 +1,1 @@
-../../ft_tree/hash_table/new/liberty2_8_(20,44,87,103,140,176,186,193).txt
+../../ft_tree/hash_table/new/string/liberty2_8_(20,44,87,103,140,176,186,193).txt
