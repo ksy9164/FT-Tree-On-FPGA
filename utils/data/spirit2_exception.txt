@@ -1,0 +1,8 @@
+N_PBS_CHK 1112641809 2005.04.04 sn411 Apr 4 12:10:09 sn411/sn411 pbs_mom: task_check, cannot tm_reply to 12670.sadmin2 task 1
+R_NMI1 1114044219 2005.04.20 sn62 Apr 20 17:43:39 sn62/sn62 hpasmd[2591]: WARNING: hpasmd: An Unrecoverable System Error (NMI) has occurred
+N_PBS_EPI 1115218309 2005.05.04 sn37 May 4 07:51:49 sn37/sn37 pbs_mom: scan_for_exiting, system epilog failed w/rc=1
+N_PBS_EPI 1121146911 2005.07.11 sn512 Jul 11 22:41:51 sn512/sn512 pbs_mom: scan_for_exiting, system epilog failed w/rc=1
+N_PBS_EPI 1123447561 2005.08.07 sn512 Aug 7 13:46:01 sn512/sn512 pbs_mom: scan_for_exiting, system epilog failed w/rc=1
+N_PBS_EPI 1127349334 2005.09.21 sn132 Sep 21 17:35:34 sn132/sn132 pbs_mom: scan_for_exiting, system epilog failed w/rc=1
+N_PBS_EPI 1132155496 2005.11.16 sn512 Nov 16 07:38:16 sn512/sn512 pbs_mom: scan_for_exiting, system epilog failed w/rc=1
+N_AUTH 1135103811 2005.12.20 slogin1 Dec 20 10:36:51 slogin1/slogin1 su(pam_unix)[16942]: authentication failure; logname=#1642# uid=12769 euid=0 tty= ruser=#1642# rhost= user=root
