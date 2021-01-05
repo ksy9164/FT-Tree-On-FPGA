@@ -8,15 +8,15 @@
 using namespace std;
 using namespace boost::algorithm;
 
-/* #define F_TABLE "../data/string/bgl2_hash.txt" */
-/* #define F_TABLE "../data/string/liberty2_hash.txt" */
-/* #define F_TABLE "../data/string/spirit2_hash.txt" */
-#define F_TABLE "../data/string/Thunderbird_hash.txt"
+#define F_TABLE "../data/string/bgl2_hash.txt"
+/* #define F_TABLE "../data/string/liberty2_hash.txt"
+ * #define F_TABLE "../data/string/spirit2_hash.txt"
+ * #define F_TABLE "../data/string/Thunderbird_hash.txt" */
 
-/* #define F_TEMPLATE "../data/string/bgl2_template.txt" */
-/* #define F_TEMPLATE "../data/string/liberty2_template.txt" */
-/* #define F_TEMPLATE "../data/string/spirit2_template.txt" */
-#define F_TEMPLATE "../data/string/Thunderbird_template.txt"
+#define F_TEMPLATE "../data/string/bgl2_template.txt"
+/* #define F_TEMPLATE "../data/string/liberty2_template.txt"
+ * #define F_TEMPLATE "../data/string/spirit2_template.txt"
+ * #define F_TEMPLATE "../data/string/Thunderbird_template.txt" */
 
 /* int list_arr[LOG_NUM][8] = {
  * {9,21,28,34,48,53,70,90},
@@ -84,7 +84,7 @@ int main(void)
          * {20,44,87,103,140,176,186,193},
          * {8,44,60,90,122,148,181,224},
          * {2,13,30,61,77,84,101,120}; */
-        if (cnt == 2 || cnt == 13 || cnt == 30 || cnt == 61 || cnt == 77 || cnt == 84 || cnt == 101 || cnt == 120) {
+        if (cnt == 9 || cnt == 21 || cnt == 28 || cnt == 34 || cnt == 48 || cnt == 53 || cnt == 70 || cnt == 90) {
             /* cout << "\nTemplate No." << cnt << "\n\n"; */
             cout << endl;
             for (int i = 2; i < token.size(); i++) {
@@ -109,7 +109,7 @@ int main(void)
                 }
 
                 if (check) {
-                    cout << "\tanswer_t[" <<ucnt << "][" << (int)hash << "] = 1;" <<  endl;
+                    cout << "\tanswer_table[" <<ucnt << "][" << (int)hash << "] = 1;" <<  endl;
                 }
             }
             ucnt++;
