@@ -118,6 +118,7 @@ int main(int argc, char** argv) {
             if (i % (buff_size / 1000) == 0) {
                 cout << "Progress " << ++cnt_f << endl;
             }
+        }
     }
     printf("Data sending is done \n");
     fflush(stdout);
