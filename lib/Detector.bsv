@@ -7,6 +7,9 @@ import FIFOLI::*;
 import DividedFIFO::*;
 import MultiN::*;
 
+import BRAM::*;
+import BRAMFIFO::*;
+
 interface GetIfc;
     method ActionValue#(Bit#(128)) get;
 endinterface
@@ -28,8 +31,9 @@ module mkDetector(DetectorIfc);
     Vector#(2, Reg#(Bit#(8))) sub_link <- replicateM(mkReg(0));
     Vector#(8 ,FIFOLI#(Bit#(128), 5)) outputQ <- replicateM(mkFIFOLI);
 
-    DividedFIFOIfc#(Bit#(128), 300, 6) wordout_saveQ <- mkDividedFIFO;
-    DividedFIFOIfc#(Bit#(2), 300, 6) wordflagSaveQ <- mkDividedFIFO;
+    FIFO#(Bit#(128)) wordout_saveQ <- mkSizedBRAMFIFO(250);
+    FIFO#(Bit#(2)) wordflagSaveQ <- mkSizedBRAMFIFO(250);
+
     MultiOneToEightIfc#(Bit#(128)) wordoutQ <- mkMultiOnetoEight;
     MultiOneToEightIfc#(Bit#(2)) wordflagoutQ <- mkMultiOnetoEight;
 

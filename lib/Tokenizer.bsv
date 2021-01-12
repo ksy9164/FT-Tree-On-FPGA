@@ -8,7 +8,7 @@ import BRAMFIFO::*;
 import FIFOLI::*;
 
 interface TokenizerIfc;
-    method Action put(Bit#(64) data);
+    method Action put(Bit#(128) data);
     method ActionValue#(Tuple2#(Bit#(2), Bit#(128))) get_word;
     method ActionValue#(Tuple2#(Bit#(8), Bit#(8))) get_hash;
 endinterface
@@ -19,7 +19,7 @@ endfunction
 
 (* synthesize *)
 module mkTokenizer (TokenizerIfc);
-    FIFO#(Bit#(64)) inputQ <- mkFIFO;
+    FIFO#(Bit#(128)) inputQ <- mkSizedBRAMFIFO(100);
     FIFOLI#(Vector#(2, Bit#(8)), 5) toTokenizingQ <- mkFIFOLI;
     FIFOLI#(Vector#(2, Bit#(8)), 5) toHashingQ <- mkFIFOLI;
     FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;
@@ -34,11 +34,11 @@ module mkTokenizer (TokenizerIfc);
 
     Reg#(Bit#(1)) token_handle <- mkReg(0);
 
-    SerializerIfc#(64, 4) serial_inputQ <- mkSerializer; 
+    SerializerIfc#(128, 8) serial_inputQ <- mkSerializer; 
 
     rule serial16Bits;
         inputQ.deq;
-        Bit#(64) d = inputQ.first;
+        Bit#(128) d = inputQ.first;
         serial_inputQ.put(d);
     endrule
 
@@ -156,7 +156,7 @@ module mkTokenizer (TokenizerIfc);
         end
     endrule
 
-    method Action put(Bit#(64) data);
+    method Action put(Bit#(128) data);
         inputQ.enq(data);
     endmethod
     method ActionValue#(Tuple2#(Bit#(2), Bit#(128))) get_word;

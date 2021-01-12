@@ -13,30 +13,27 @@ import Detector::*;
 import FIFOLI::*;
 import DividedFIFO::*;
 import MultiN::*;
+import SinglePipe::*;
+
+import DRAMController::*;
 
 interface HwMainIfc;
 endinterface
 
-module mkHwMain#(PcieUserIfc pcie) 
-    (HwMainIfc);
+module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
-    Reg#(Bit#(32)) addr <- mkReg(0);
-    Vector#(8, Reg#(Bit#(32))) output_cnt <- replicateM(mkReg(0));
-    Reg#(Bit#(10)) write_cnt <- mkReg(0);
-    Reg#(Bit#(10)) write_target_number <- mkReg(0);
+    Reg#(Bit#(32)) dramReadCnt <- mkReg(0);
+    Reg#(Bit#(32)) dramWriteCnt <- mkReg(0);
+    SerializerIfc#(512, 4) serial_dramQ <- mkSerializer; 
 
-    Reg#(Bit#(2)) write_handle <- mkReg(0);
+    Reg#(Bit#(32)) addr <- mkReg(0);
     
-    FIFOLI#(Bit#(2), 5) write_doneQ <- mkFIFOLI;
     FIFO#(Bit#(152)) hashtableQ <- mkFIFO;
     FIFO#(Bit#(129)) sub_hashtableQ <- mkFIFO;
-    FIFO#(Tuple2#(Bit#(8), Bit#(8))) put_hashQ <- mkFIFO;
-    FIFO#(Tuple2#(Bit#(2), Bit#(128))) put_wordQ <- mkFIFO;
-
-    FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) write_reqQ <- mkFIFOLI;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
     
-    Vector#(8, DividedBRAMFIFOIfc#(Bit#(128), 100, 10)) outputQ <- replicateM(mkDividedBRAMFIFO); // 128 x 1000 Size and 10 steps (like FIFOLI)
+    Vector#(8, FIFO#(Bit#(32))) outputQ <- replicateM(mkSizedBRAMFIFO(100));
+    Vector#(8, SerializerIfc#(128 , 4)) serial_outQ <- replicateM(mkSerializer);
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
     FIFO#(Bit#(24)) hashtable_cmdQ <- mkFIFO;
@@ -47,11 +44,9 @@ module mkHwMain#(PcieUserIfc pcie)
 
     DeSerializerIfc#(32, 4) deserial_hasht <- mkDeSerializer;
     DeSerializerIfc#(32, 4) deserial_sub_hasht <- mkDeSerializer;
-    DeSerializerIfc#(32, 2) deserial_pcieio <- mkDeSerializer;
+    DeSerializerIfc#(32, 16) deserial_pcieio <- mkDeSerializer;
 
-    TokenizerIfc tokenizer <- mkTokenizer;
-
-    DetectorIfc detector <- mkDetector;
+    SinglePipeIfc pipe <- mkSinglePipe;
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -74,35 +69,7 @@ module mkHwMain#(PcieUserIfc pcie)
             hashtable_dataQ.enq(d);
         end else if (off == 3) begin // 12
             sub_hashtable_dataQ.enq(d);
-        end else begin // write req 15,16,32,48
-            write_reqQ.enq(tuple2(off >> 2, d));
-        end
-    endrule
-
-    /* Send Output To The Host */
-    rule recWriteRequest(write_target_number == write_cnt);
-        write_reqQ.deq;
-        Bit#(32) off = zeroExtend(tpl_1(write_reqQ.first));
-        Bit#(10) step = truncate(tpl_2(write_reqQ.first));
-        Bit#(2) idx = truncate(off);
-
-        pcie.dmaWriteReq(off * 1000, step); // each 4 module has 1000 x 128 Bits DMA space
-
-        write_target_number <= step;
-        write_handle <= idx;
-    endrule
-    rule writeDMA(write_target_number != write_cnt);
-        Bit#(2) idx = write_handle;
-        outputQ[idx].deq;
-        Bit#(128) d = outputQ[idx].first;
-        pcie.dmaWriteData(d);
-        if (write_target_number == write_cnt - 1) begin
-            write_cnt <= 0;
-            write_target_number <= 0;
-            write_doneQ.enq(idx);
-        end else begin
-            write_cnt <= write_cnt + 1;
-        end
+        end  
     endrule
 
     /* Get Hash Table Data From The Host */
@@ -117,6 +84,7 @@ module mkHwMain#(PcieUserIfc pcie)
             hasht_handle <= 0;
         end
     endrule
+
     rule getHashTableData;
         hashtable_cmdQ.deq;
         Bit#(128) d <- deserial_hasht.get;
@@ -154,52 +122,51 @@ module mkHwMain#(PcieUserIfc pcie)
     rule putHash;
         hashtableQ.deq;
         let d = hashtableQ.first;
-        detector.put_table(d);
+        pipe.putHashTable(d);
     endrule
 
     /* Put SubHashTable Data */
     rule putSubHash;
         sub_hashtableQ.deq;
         let d = sub_hashtableQ.first;
-        detector.put_sub_table(d);
+        pipe.putSubHashTable(d);
     endrule
 
-    /* Put 128Bits Log Data To Tokenizer */
-    rule toTokenizingBridge; // Maximum word length is 8 (8 bytes)
-        Bit#(64) d <- deserial_pcieio.get;
-        tokenizer.put(d);
+///////////////////////////////////////////////////////////////////////////////////////
+    /* DRAM CTL & Put data to Single-Pipe */
+    rule dramWrite(dramWriteCnt < file_size);
+        dramWriteCnt <= dramWriteCnt + 1;
+        Bit#(512) d <- deserial_pcieio.get;
+        dram.write(zeroExtend(dramWriteCnt)*64, d, 64);
     endrule
 
-    /* Word -> Detector */
-    rule getWordFromTokenizer; // Get Hash data From the Tokenizer
-        Tuple2#(Bit#(2), Bit#(128)) d <- tokenizer.get_word;
-        put_wordQ.enq(d);
+    rule dramReadReq(dramWriteCnt >= file_size && dramReadCnt < file_size);
+        dramReadCnt <= dramReadCnt + 1;
+        dram.readReq(zeroExtend(dramReadCnt)*64, 64);
     endrule
 
-    rule putWordToDetector;
-        put_wordQ.deq;
-        Tuple2#(Bit#(2), Bit#(128)) d = put_wordQ.first; //Get Word From the Toknizer
-        detector.put_word(d);
+    rule dramRead;
+        Bit#(512) d <- dram.read;
+        serial_dramQ.put(d);
     endrule
 
-    /* Hash -> Detector */
-    rule getHashFromTokenizer;
-        Tuple2#(Bit#(8), Bit#(8)) d <- tokenizer.get_hash; //Get Word From the Toknizer
-        put_hashQ.enq(d);
-    endrule
-
-    rule putWord;
-        put_hashQ.deq;
-        Tuple2#(Bit#(8), Bit#(8)) d = put_hashQ.first;
-        detector.put_hash(d);
+    rule putDecomp;
+        Bit#(128) d <- serial_dramQ.get;
+        pipe.putData(d);
     endrule
 
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule getResult;
-            Bit#(128) d <- detector.get[i].get;
+        rule serialResult;
+            Bit#(128) d <- pipe.get[i].get;
             $write("%d %s \n",i, d);
-            /* outputQ[i].enq(d); */
-            output_cnt[i] <= output_cnt[i] + 1;
+            serial_outQ[i].put(d);
+        endrule
+    end
+
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
+        rule getResult;
+            Bit#(32) d <- serial_outQ[i].get;
+            outputQ[i].enq(d);
         endrule
     end
 
@@ -208,12 +175,8 @@ module mkHwMain#(PcieUserIfc pcie)
         let r <- pcie.dataReq;
         let a = r.addr;
         let off = (a>>2);
-        Bit#(2) idx = truncate(off);
-        if (off != 0) begin  // send current output numbers
-            pcie.dataSend(r, output_cnt[off]);
-        end else begin
-            write_doneQ.deq; // DMA writing is done
-            pcie.dataSend(r, zeroExtend(write_doneQ.first));
-        end
+        Bit#(3) idx = truncate(off);
+        outputQ[idx].deq;
+        pcie.dataSend(r, outputQ[idx].first);
     endrule
 endmodule
