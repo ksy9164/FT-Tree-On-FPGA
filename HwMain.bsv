@@ -158,7 +158,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule serialResult;
             Bit#(128) d <- pipe.get[i].get;
-            $write("%d %s \n",i, d);
+            $write("ans %d %s \n",i, d);
             serial_outQ[i].put(d);
         endrule
     end

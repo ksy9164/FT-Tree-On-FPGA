@@ -20,9 +20,10 @@ endfunction
 (* synthesize *)
 module mkTokenizer (TokenizerIfc);
     FIFO#(Bit#(128)) inputQ <- mkSizedBRAMFIFO(100);
-    FIFOLI#(Vector#(2, Bit#(8)), 5) toTokenizingQ <- mkFIFOLI;
-    FIFOLI#(Vector#(2, Bit#(8)), 5) toHashingQ <- mkFIFOLI;
-    FIFOLI#(Vector#(2, Bit#(8)), 5) hashQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 3) toEliminateZerosQ <- mkFIFOLI;
+    FIFO#(Vector#(2, Bit#(8))) toTokenizingQ <- mkFIFO;
+    FIFOLI#(Vector#(2, Bit#(8)), 3) toHashingQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 3) hashQ <- mkFIFOLI;
     FIFO#(Bit#(128)) wordQ <- mkFIFO;
     FIFO#(Bit#(1)) linespaceQ <- mkFIFO;
     FIFO#(Bit#(2)) wordflagQ <- mkFIFO;
@@ -33,6 +34,8 @@ module mkTokenizer (TokenizerIfc);
     Reg#(Bit#(8)) hash_b <- mkReg(23);
 
     Reg#(Bit#(1)) token_handle <- mkReg(0);
+
+    Reg#(Bit#(8)) merging_remember <- mkReg(0);
 
     SerializerIfc#(128, 8) serial_inputQ <- mkSerializer; 
 
@@ -45,12 +48,37 @@ module mkTokenizer (TokenizerIfc);
     rule get16Bits;
         Bit#(16) serialized <- serial_inputQ.get;
         Vector#(2, Bit#(8)) d = replicate(0);
+        if (serialized != 0) begin
+            d[0] = serialized[7:0];
+            d[1] = serialized[15:8];
 
-        d[0] = serialized[7:0];
-        d[1] = serialized[15:8];
+            toEliminateZerosQ.enq(d);
+        end
+    endrule
 
-        toTokenizingQ.enq(d);
-        toHashingQ.enq(d);
+    rule eliminateZeros;
+        toEliminateZerosQ.deq;
+        Vector#(2, Bit#(8)) d = toEliminateZerosQ.first;
+        Bit#(8) remember = merging_remember;
+
+        if (d[1] == 0 && remember == 0) begin
+            merging_remember <= d[0];
+        end else if (d[1] == 0 && remember != 0) begin
+            d[1] = d[0];
+            d[0] = remember;
+            merging_remember <= 0;
+            toTokenizingQ.enq(d);
+            toHashingQ.enq(d);
+        end else if (remember == 0 )begin
+            toTokenizingQ.enq(d);
+            toHashingQ.enq(d);
+        end else begin
+            merging_remember <= d[1];
+            d[1] = d[0];
+            d[0] = remember;
+            toTokenizingQ.enq(d);
+            toHashingQ.enq(d);
+        end
     endrule
 
     rule doTokenizing(token_handle == 0);

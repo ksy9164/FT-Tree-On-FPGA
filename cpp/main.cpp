@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
     printf("Sub Table uploading Done!\n");
     fflush(stdout);
 
-    FILE *fin = fopen(log_file_name[ID], "rb");
-    /* FILE *fin = fopen("tempdata.txt", "rb"); */
+    /* FILE *fin = fopen(log_file_name[ID], "rb"); */
+    FILE *fin = fopen("./compressed0000.bin", "rb");
     uint32_t file_size = 0;
     uint32_t buff_size = 0;
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
     fread(log_data, sizeof(char), file_size, fin);
 
     /* Put size */
-    pcie->userWriteWord(0, file_size);
+    pcie->userWriteWord(0, file_size / 64);
 
     int cnt_f = 0;
     /* Put data */
