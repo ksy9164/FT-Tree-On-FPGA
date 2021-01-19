@@ -33,7 +33,6 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
 
     Vector#(8, FIFO#(Bit#(128))) outputQ <- replicateM(mkSizedBRAMFIFO(100));
-    Vector#(8, SerializerIfc#(128 , 4)) serial_outQ <- replicateM(mkReverseSerializer);
     FIFO#(Bit#(128)) mergeOutQ <- mkSizedBRAMFIFO(512);
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
