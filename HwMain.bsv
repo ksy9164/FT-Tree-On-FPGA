@@ -27,13 +27,14 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     SerializerIfc#(512, 4) serial_dramQ <- mkSerializer; 
 
     Reg#(Bit#(32)) addr <- mkReg(0);
-    
-    FIFO#(Bit#(152)) hashtableQ <- mkFIFO;
-    FIFO#(Bit#(129)) sub_hashtableQ <- mkFIFO;
+
+    FIFOLI#(Bit#(152), 3) hashtableQ <- mkFIFOLI;
+    FIFOLI#(Bit#(129), 3) sub_hashtableQ <- mkFIFOLI;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
-    
-    Vector#(8, FIFO#(Bit#(32))) outputQ <- replicateM(mkSizedBRAMFIFO(10000000));
-    Vector#(8, SerializerIfc#(128 , 4)) serial_outQ <- replicateM(mkSerializer);
+
+    Vector#(8, FIFO#(Bit#(128))) outputQ <- replicateM(mkSizedBRAMFIFO(10000000));
+    Vector#(8, SerializerIfc#(128 , 4)) serial_outQ <- replicateM(mkReverseSerializer);
+    FIFO#(Bit#(128)) mergeOutQ <- mkSizedBRAMFIFO(5120000);
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
     FIFO#(Bit#(24)) hashtable_cmdQ <- mkFIFO;
@@ -46,11 +47,23 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     DeSerializerIfc#(32, 4) deserial_sub_hasht <- mkDeSerializer;
     DeSerializerIfc#(128, 4) deserial_pcieio <- mkDeSerializer;
 
-    SinglePipeIfc pipe <- mkSinglePipe;
+    Vector#(3, SinglePipeIfc) pipe <- replicateM(mkSinglePipe);
 
     FIFO#(Bit#(32)) dmaReadReqQ <- mkFIFO;
     Reg#(Bit#(32)) readCnt <- mkReg(0);
     Reg#(Bit#(32)) readOff <- mkReg(0);
+
+    Reg#(Bit#(3)) merging_out_handle <- mkReg(0);
+    Reg#(Bit#(1)) merging_out_flag <- mkReg(0);
+    Reg#(Bit#(3)) merging_target <- mkReg(0);
+
+    FIFO#(Bit#(32)) dmaWriteReqQ <- mkFIFO;
+    Reg#(Bit#(32)) outputCnt <- mkReg(0);
+    Reg#(Bit#(1)) dmaWriteHandle <- mkReg(0);
+    Reg#(Bit#(32)) dmaWriteTarget <- mkReg(0);
+    Reg#(Bit#(32)) dmaWriteCnt <- mkReg(0);
+
+    Reg#(Bit#(2)) dramToPipeHandle <- mkReg(0);
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -66,28 +79,29 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
 
         let off = (a>>2);
         if ( off == 0 ) begin
-            file_size <= d;
+            file_size <= d * 3;
         end else if (off == 1) begin // Log Data In
             dmaReadReqQ.enq(d);
-            /* deserial_pcieio.put(d); */
         end else if (off == 2) begin // Read Normal Hash Table fromt the DMA
             hashtable_dataQ.enq(d);
         end else if (off == 3) begin // 12
             sub_hashtable_dataQ.enq(d);
-        end  
+        end else if (off == 4) begin
+            dmaWriteReqQ.enq(d);
+        end
     endrule
 
     rule getReadReq(readCnt == 0);
         dmaReadReqQ.deq;
         Bit#(32) cnt = dmaReadReqQ.first;
-		pcie.dmaReadReq(16 * readOff, truncate(cnt)); // offset, words
+        pcie.dmaReadReq(16 * readOff, truncate(cnt)); // offset, words
         readCnt <= cnt;
         readOff <= readOff + cnt;
     endrule
 
     rule getDataFromDMA(readCnt != 0);
-		Bit#(128) rd <- pcie.dmaReadWord;
-		deserial_pcieio.put(rd);
+        Bit#(128) rd <- pcie.dmaReadWord;
+        deserial_pcieio.put(rd);
         readCnt <= readCnt - 1;
     endrule
 
@@ -141,14 +155,18 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     rule putHash;
         hashtableQ.deq;
         let d = hashtableQ.first;
-        pipe.putHashTable(d);
+        pipe[0].putHashTable(d);
+        pipe[1].putHashTable(d);
+        pipe[2].putHashTable(d);
     endrule
 
     /* Put SubHashTable Data */
     rule putSubHash;
         sub_hashtableQ.deq;
         let d = sub_hashtableQ.first;
-        pipe.putSubHashTable(d);
+        pipe[0].putSubHashTable(d);
+        pipe[1].putSubHashTable(d);
+        pipe[2].putSubHashTable(d);
     endrule
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -171,31 +189,90 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
 
     rule putDecomp;
         Bit#(128) d <- serial_dramQ.get;
-        pipe.putData(d);
+        Bit#(2) idx = dramToPipeHandle;
+        if (dramToPipeHandle == 2) begin
+            dramToPipeHandle <= 0;
+        end else begin
+            dramToPipeHandle <= dramToPipeHandle + 1;
+        end
+        pipe[idx].putData(d);
     endrule
 
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule serialResult;
-            Bit#(128) d <- pipe.get[i].get;
-            $write("ans %d %s \n",i, d);
-            serial_outQ[i].put(d);
+            Bit#(128) d <- pipe[0].get[i].get;
+            if (d != 0) begin
+                outputQ[i].enq(d);
+            end
+        endrule
+        rule serialResultTwo;
+            Bit#(128) d <- pipe[1].get[i].get;
+            if (d != 0) begin
+                outputQ[i].enq(d);
+            end
+        endrule
+        rule serialResultThree;
+            Bit#(128) d <- pipe[2].get[i].get;
+            if (d != 0) begin
+                outputQ[i].enq(d);
+            end
         endrule
     end
 
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule getResult;
-            Bit#(32) d <- serial_outQ[i].get;
-            outputQ[i].enq(d);
-        endrule
-    end
+/////////////////////Merging outputs and Sending to Host via DMA//////////////////////
+
+    rule outputFinder;
+        merging_out_handle <= merging_out_handle + 1;
+    endrule
+
+    rule mergingOutputStepOne(merging_out_flag == 0);
+        outputQ[merging_out_handle].deq;
+        Bit#(128) d = outputQ[merging_out_handle].first;
+        mergeOutQ.enq(d);
+        $display("id %d %s", merging_out_handle, d);
+        merging_out_flag <= 1;
+        outputCnt <= outputCnt + 1;
+        merging_target <= merging_out_handle;
+    endrule
+
+    rule mergingOutputStepTwo(merging_out_flag == 1);
+        outputQ[merging_target].deq;
+        Bit#(128) d = outputQ[merging_target].first;
+        mergeOutQ.enq(d);
+        $display("id %d %s", merging_target, d);
+        outputCnt <= outputCnt + 1;
+        if (d == 10) begin
+            merging_out_flag <= 0;
+        end
+    endrule
+
+    rule getDmaWriteReq(dmaWriteHandle == 0);
+        dmaWriteReqQ.deq;
+        pcie.dmaWriteReq(0, truncate(dmaWriteReqQ.first));
+        dmaWriteHandle <= 1;
+        dmaWriteTarget <= dmaWriteReqQ.first;
+        dmaWriteCnt <= 0;
+    endrule
+
+    rule putDataToDma(dmaWriteHandle != 0);
+        mergeOutQ.deq;
+        pcie.dmaWriteData(mergeOutQ.first);
+        if (dmaWriteCnt + 1 == dmaWriteTarget) begin
+            dmaWriteHandle <= 0;
+        end else begin
+            dmaWriteCnt <= dmaWriteCnt + 1;
+        end
+    endrule
 
     rule sendResultToHost; 
-        Bit#(8) d = 0;
         let r <- pcie.dataReq;
         let a = r.addr;
-        let off = (a>>2);
-        Bit#(3) idx = truncate(off);
-        outputQ[idx].deq;
-        pcie.dataSend(r, outputQ[idx].first);
+        let offset = (a>>2);
+
+        if (offset == 0) begin
+            pcie.dataSend(r, outputCnt);
+        end else begin
+            pcie.dataSend(r, dmaWriteCnt);
+        end
     endrule
 endmodule

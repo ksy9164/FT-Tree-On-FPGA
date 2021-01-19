@@ -111,67 +111,42 @@ int main(int argc, char** argv) {
     /* pcie->userWriteWord(0, file_size / 64); */
     pcie->userWriteWord(0, 1024 * 1024 / 64 - 1);
 
+    // increasing data size (same , duplicated)
     for ( uint32_t i = 0; i < 1024*1024/4; i++ ) {
-        ((uint32_t*)dmabuf)[i] = log_data[i];
+        uint32_t id = (i / 4) * 12 +  (i % 4);
+        ((uint32_t*)dmabuf)[id] = log_data[i];
+        ((uint32_t*)dmabuf)[id + 4] = log_data[i];
+        ((uint32_t*)dmabuf)[id + 8] = log_data[i];
     }
 
-    for (int i = 0; i < 128; ++i) {
+    for (int i = 0; i < 128 * 3; ++i) {
         pcie->userWriteWord(4, 512); // 512 x 16bytes
     }
 
     int cnt_f = 0;
-    /* Put data */
-    /* for (int i = 0; i < buff_size; ++i) {
-     *     pcie->userWriteWord(4, log_data[i]);
-     *     if (buff_size > 1000) {
-     *         if (i % (buff_size / 1000) == 0) {
-     *             cout << "Progress " << ++cnt_f << endl;
-     *         }
-     *     }
-     * } */
-    sleep(3);
+    sleep(10);
     printf("Data sending is done \n");
     fflush(stdout);
-    /**************************************************************************************************/
+    sleep(10);
+    printf("Get data from the Host! \n");
+////////////////////////////data receiving////////////////////////////////////
 
-    /************************ Get Result ***************************/
-    uint32_t cnt[4] = {0,};
-    uint32_t const_idx[4] = {0, 16000, 32000, 48000};
-    uint32_t result_file_idx[4] = {0,};
-    char *result_data[4];
-    for (int i = 0; i < 4; ++i) {
-        result_data[i] = (char *)malloc(100000 * sizeof(char));
+    sleep(10);
+	uint32_t outCnt = pcie->userReadWord(0);
+    if (outCnt > 512) {
+        pcie->userWriteWord(16, 512); // 512 x 16bytes
+        outCnt = 512;
+    } else 
+        pcie->userWriteWord(16, outCnt); // 512 x 16bytes
+    uint32_t target = 0;
+    while (target + 1 <= outCnt) {
+        target = pcie->userReadWord(4);
     }
-
-    while(1) {
-        for (i = 0; i < 4; ++i) {
-            uint32_t getd = pcie->userReadWord(i + 3); // Get output status
-            if(cnt[i] != getd)
-                pcie->userWriteWord(15 + i << 4, getd - cnt[i]); // DMA write Request
-            if(cnt[i] == getd)
-                break;
-            uint32_t response = pcie->userReadWord(0); // DMA write done!
-
-            // Copy to the HOST
-            for (j = 0; j < (getd - cnt[i]) * 16; ++j) {
-                result_data[i][j + result_file_idx[i]] = (char)dmabuf[const_idx[i] + j];
-            }
-
-            result_file_idx[i] = result_file_idx[i] + (getd - cnt[i]) * 16;
-            cnt[i] = getd;
-        }
-    }
-    /**************************************************************/
-
-    ofstream result_f[4];
-    result_f[0].open("result1.txt");
-    for (i = 0; i < result_file_idx[i]; ++i) {
-        result_f[0] << result_data[0][i];
-    }
-
-    printf("Done :) \n");
+    printf("Done !!!!!!!!:) \n");
+    sleep(10);
     fflush(stdout);
 
+    sleep(10);
     ////////////////////////////////////////////////////////////////
     
     sleep(3);
