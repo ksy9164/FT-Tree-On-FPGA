@@ -108,18 +108,28 @@ int main(int argc, char** argv) {
     fread(log_data, sizeof(char), file_size, fin);
 
     /* Put size */
-    pcie->userWriteWord(0, file_size / 64);
+    /* pcie->userWriteWord(0, file_size / 64); */
+    pcie->userWriteWord(0, 1024 * 1024 / 64 - 1);
+
+    for ( uint32_t i = 0; i < 1024*1024/4; i++ ) {
+        ((uint32_t*)dmabuf)[i] = log_data[i];
+    }
+
+    for (int i = 0; i < 128; ++i) {
+        pcie->userWriteWord(4, 512); // 512 x 16bytes
+    }
 
     int cnt_f = 0;
     /* Put data */
-    for (int i = 0; i < buff_size; ++i) {
-        pcie->userWriteWord(4, log_data[i]);
-        if (buff_size > 1000) {
-            if (i % (buff_size / 1000) == 0) {
-                cout << "Progress " << ++cnt_f << endl;
-            }
-        }
-    }
+    /* for (int i = 0; i < buff_size; ++i) {
+     *     pcie->userWriteWord(4, log_data[i]);
+     *     if (buff_size > 1000) {
+     *         if (i % (buff_size / 1000) == 0) {
+     *             cout << "Progress " << ++cnt_f << endl;
+     *         }
+     *     }
+     * } */
+    sleep(3);
     printf("Data sending is done \n");
     fflush(stdout);
     /**************************************************************************************************/

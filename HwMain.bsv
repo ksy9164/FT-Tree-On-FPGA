@@ -32,7 +32,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     FIFO#(Bit#(129)) sub_hashtableQ <- mkFIFO;
     FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
     
-    Vector#(8, FIFO#(Bit#(32))) outputQ <- replicateM(mkSizedBRAMFIFO(100));
+    Vector#(8, FIFO#(Bit#(32))) outputQ <- replicateM(mkSizedBRAMFIFO(10000000));
     Vector#(8, SerializerIfc#(128 , 4)) serial_outQ <- replicateM(mkSerializer);
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
@@ -44,9 +44,13 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
 
     DeSerializerIfc#(32, 4) deserial_hasht <- mkDeSerializer;
     DeSerializerIfc#(32, 4) deserial_sub_hasht <- mkDeSerializer;
-    DeSerializerIfc#(32, 16) deserial_pcieio <- mkDeSerializer;
+    DeSerializerIfc#(128, 4) deserial_pcieio <- mkDeSerializer;
 
     SinglePipeIfc pipe <- mkSinglePipe;
+
+    FIFO#(Bit#(32)) dmaReadReqQ <- mkFIFO;
+    Reg#(Bit#(32)) readCnt <- mkReg(0);
+    Reg#(Bit#(32)) readOff <- mkReg(0);
 
     rule getDataFromHost;
         let w <- pcie.dataReceive;
@@ -64,12 +68,27 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
         if ( off == 0 ) begin
             file_size <= d;
         end else if (off == 1) begin // Log Data In
-            deserial_pcieio.put(d);
+            dmaReadReqQ.enq(d);
+            /* deserial_pcieio.put(d); */
         end else if (off == 2) begin // Read Normal Hash Table fromt the DMA
             hashtable_dataQ.enq(d);
         end else if (off == 3) begin // 12
             sub_hashtable_dataQ.enq(d);
         end  
+    endrule
+
+    rule getReadReq(readCnt == 0);
+        dmaReadReqQ.deq;
+        Bit#(32) cnt = dmaReadReqQ.first;
+		pcie.dmaReadReq(16 * readOff, truncate(cnt)); // offset, words
+        readCnt <= cnt;
+        readOff <= readOff + cnt;
+    endrule
+
+    rule getDataFromDMA(readCnt != 0);
+		Bit#(128) rd <- pcie.dmaReadWord;
+		deserial_pcieio.put(rd);
+        readCnt <= readCnt - 1;
     endrule
 
     /* Get Hash Table Data From The Host */
