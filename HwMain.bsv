@@ -14,6 +14,7 @@ import FIFOLI::*;
 import DividedFIFO::*;
 import MultiN::*;
 import SinglePipe::*;
+import Merger::*;
 
 import DRAMController::*;
 
@@ -30,9 +31,8 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
 
     FIFOLI#(Bit#(152), 3) hashtableQ <- mkFIFOLI;
     FIFOLI#(Bit#(129), 3) sub_hashtableQ <- mkFIFOLI;
-    FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 5) pcie_reqQ <- mkFIFOLI;
+    FIFOLI#(Tuple2#(Bit#(20), Bit#(32)), 2) pcie_reqQ <- mkFIFOLI;
 
-    Vector#(8, FIFO#(Bit#(128))) outputQ <- replicateM(mkSizedBRAMFIFO(100));
     FIFO#(Bit#(128)) mergeOutQ <- mkSizedBRAMFIFO(512);
 
     FIFO#(Bit#(32)) hashtable_dataQ <- mkFIFO;
@@ -197,52 +197,88 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
         pipe[idx].putData(d);
     endrule
 
+    Vector#(8, MergerIfc) outmerger_1 <- replicateM(mkMerger);
+    Vector#(8, MergerIfc) outmerger_2 <- replicateM(mkMerger);
+
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule serialResult;
+        rule merge_step1_1;
             Bit#(128) d <- pipe[0].get[i].get;
             if (d != 0) begin
-                outputQ[i].enq(d);
+                outmerger_1[i].enqOne(d);
             end
         endrule
-        rule serialResultTwo;
+        rule merge_step1_2;
             Bit#(128) d <- pipe[1].get[i].get;
             if (d != 0) begin
-                outputQ[i].enq(d);
+                outmerger_1[i].enqTwo(d);
             end
         endrule
-        rule serialResultThree;
+    end
+
+
+    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
+        rule merge_step2_1;
+            outmerger_1[i].deq;
+            Bit#(128) d = outmerger_1[i].first;
+            if (d != 0) begin
+                outmerger_2[i].enqOne(d);
+            end
+        endrule
+        rule merge_step2_2;
             Bit#(128) d <- pipe[2].get[i].get;
             if (d != 0) begin
-                outputQ[i].enq(d);
+                outmerger_2[i].enqTwo(d);
             end
         endrule
     end
 
 /////////////////////Merging outputs and Sending to Host via DMA//////////////////////
 
-    rule outputFinder;
-        merging_out_handle <= merging_out_handle + 1;
-    endrule
+    Vector#(4, MergerIfc) merger8to4 <- replicateM(mkMerger);
+    Vector#(2, MergerIfc) merger4to2 <- replicateM(mkMerger);
+    MergerIfc merger2to1 <- mkMerger;
 
-    rule mergingOutputStepOne(merging_out_flag == 0);
-        outputQ[merging_out_handle].deq;
-        Bit#(128) d = outputQ[merging_out_handle].first;
-        mergeOutQ.enq(d);
-        $display("id %d %s", merging_out_handle, d);
-        merging_out_flag <= 1;
-        outputCnt <= outputCnt + 1;
-        merging_target <= merging_out_handle;
-    endrule
+    for (Bit#(8) i = 0; i < 8; i = i + 1) begin
+        rule mergeStep1;
+            Bit#(8) id = i / 2;
+            outmerger_2[i].deq;
+            if (i%2 == 0) begin
+                merger8to4[id].enqOne(outmerger_2[i].first);
+            end else begin
+                merger8to4[id].enqTwo(outmerger_2[i].first);
+            end
+        endrule
+    end
 
-    rule mergingOutputStepTwo(merging_out_flag == 1);
-        outputQ[merging_target].deq;
-        Bit#(128) d = outputQ[merging_target].first;
-        mergeOutQ.enq(d);
-        $display("id %d %s", merging_target, d);
+    for (Bit#(8) i = 0; i < 4; i = i + 1) begin
+        rule mergeStep2;
+            Bit#(8) id = i / 2;
+            merger8to4[i].deq;
+            if (i%2 == 0) begin
+                merger4to2[id].enqOne(merger8to4[i].first);
+            end else begin
+                merger4to2[id].enqTwo(merger8to4[i].first);
+            end
+        endrule
+    end
+
+    for (Bit#(8) i = 0; i < 2; i = i + 1) begin
+        rule mergeStep3;
+            Bit#(8) id = i / 2;
+            merger4to2[i].deq;
+            if (i%2 == 0) begin
+                merger2to1.enqOne(merger4to2[i].first);
+            end else begin
+                merger2to1.enqTwo(merger4to2[i].first);
+            end
+        endrule
+    end
+
+    rule toMergeQ;
+        merger2to1.deq;
+        mergeOutQ.enq(merger2to1.first);
+        $display("%s",merger2to1.first);
         outputCnt <= outputCnt + 1;
-        if (d == 10) begin
-            merging_out_flag <= 0;
-        end
     endrule
 
     rule getDmaWriteReq(dmaWriteHandle == 0);

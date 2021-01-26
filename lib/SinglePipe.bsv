@@ -36,13 +36,16 @@ module mkSinglePipe(SinglePipeIfc);
     FIFOLI#(Bit#(2), 2) tokenizerSignalQ <- mkFIFOLI;
     Reg#(Bit#(3)) tokenizer_output_handle <- mkReg(0);
     Reg#(Bit#(3)) tokenizer_hash_handle <- mkReg(0);
-    Vector#(8, FIFO#(Bit#(128))) outputQ <- replicateM(mkSizedBRAMFIFO(100)); 
+    Vector#(8, FIFOLI#(Bit#(128), 2)) outputQ <- replicateM(mkFIFOLI); 
+    Vector#(8, FIFO#(Bit#(128))) mergeOutQ <- replicateM(mkSizedBRAMFIFO(100)); 
+    Vector#(8, Reg#(Bit#(1))) output_merge_flag <- replicateM(mkReg(0));
     Vector#(8, Reg#(Bit#(1))) output_merge_handle <- replicateM(mkReg(0));
+    Vector#(8, Reg#(Bit#(1))) merging_target <- replicateM(mkReg(0));
 
     rule getDecompAndPutTokenizer;
         lzah_decompressor.deq;
         Bit#(128) d = lzah_decompressor.first;
-        if (d[7:0] == 0) begin
+        if (d[127:120] == 10 || d[127:120] == 0) begin
             tokenizer_input_handle <= tokenizer_input_handle + 1;
         end
         tokenizer[tokenizer_input_handle].put(d);
@@ -53,7 +56,7 @@ module mkSinglePipe(SinglePipeIfc);
         Bit#(2) wordflag = tpl_1(d);
         Bit#(128) word = tpl_2(d);
         tokenizerSignalQ.enq(wordflag);
-        if (wordflag == 2) begin
+        if (wordflag == 2) begin // line-space
             tokenizer_output_handle <= tokenizer_output_handle + 1;
         end
         detector[tokenizer_output_handle % 2].put_word(d);
@@ -65,20 +68,35 @@ module mkSinglePipe(SinglePipeIfc);
         if (flag != 0) begin
             Tuple2#(Bit#(8), Bit#(8)) d <- tokenizer[tokenizer_hash_handle].get_hash;
             detector[tokenizer_hash_handle % 2].put_hash(d);
-            if (flag == 2) begin
+            if (flag == 2) begin // line-space
                 tokenizer_hash_handle <= tokenizer_hash_handle + 1;
             end
         end
     endrule
-    
+
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule outputMerging;
+        rule roulette;
+            output_merge_handle[i] <= output_merge_handle[i] + 1;
+        endrule
+
+        rule mergingOutputStepOne(output_merge_flag[i] == 0);
             Bit#(128) d <- detector[output_merge_handle[i]].get[i].get;
-            Bit#(1) check = 0;
+            mergeOutQ[i].enq(d);
+            output_merge_flag[i] <= 1;
+            merging_target[i] <= output_merge_handle[i];
+        endrule
+
+        rule mergingOutputStepTwo(output_merge_flag[i] == 1);
+            Bit#(128) d <- detector[merging_target[i]].get[i].get;
+            mergeOutQ[i].enq(d);
             if (d == 10) begin
-                output_merge_handle[i] <= output_merge_handle[i] + 1;
+                output_merge_flag[i] <= 0;
             end
-            outputQ[i].enq(d);
+        endrule
+
+        rule mergeToOutputQ;
+            mergeOutQ[i].deq;
+            outputQ[i].enq(mergeOutQ[i].first);
         endrule
     end
 

@@ -20,10 +20,10 @@ endfunction
 (* synthesize *)
 module mkTokenizer (TokenizerIfc);
     FIFO#(Bit#(128)) inputQ <- mkSizedBRAMFIFO(100);
-    FIFOLI#(Vector#(2, Bit#(8)), 3) toEliminateZerosQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 2) toEliminateZerosQ <- mkFIFOLI;
     FIFO#(Vector#(2, Bit#(8))) toTokenizingQ <- mkFIFO;
-    FIFOLI#(Vector#(2, Bit#(8)), 3) toHashingQ <- mkFIFOLI;
-    FIFOLI#(Vector#(2, Bit#(8)), 3) hashQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 2) toHashingQ <- mkFIFOLI;
+    FIFOLI#(Vector#(2, Bit#(8)), 2) hashQ <- mkFIFOLI;
     FIFO#(Bit#(128)) wordQ <- mkFIFO;
     FIFO#(Bit#(1)) linespaceQ <- mkFIFO;
     FIFO#(Bit#(2)) wordflagQ <- mkFIFO;
