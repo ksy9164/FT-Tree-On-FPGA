@@ -48,8 +48,8 @@ module mkDetector(DetectorIfc);
     FIFO#(Tuple2#(Bit#(2), Bit#(128))) wordInputQ <- mkFIFO;
     FIFO#(Tuple2#(Bit#(8), Bit#(8))) hashInputQ <- mkFIFO;
 
-    Vector#(3, FIFOLI#(Bit#(2), 2)) wordflagQ <- replicateM(mkFIFOLI);
-    Vector#(3, FIFOLI#(Bit#(128), 2)) wordQ <- replicateM(mkFIFOLI);
+    Vector#(3, FIFO#(Bit#(2))) wordflagQ <- replicateM(mkFIFO);
+    Vector#(3, FIFO#(Bit#(128))) wordQ <- replicateM(mkFIFO);
 
     Vector#(2, FIFO#(Tuple2#(Bool, Bool))) compareQ <- replicateM(mkFIFO);
     Vector#(2, FIFO#(Bit#(16))) svbitsQ <- replicateM(mkSizedFIFO(11));

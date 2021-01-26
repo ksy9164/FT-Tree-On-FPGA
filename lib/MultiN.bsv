@@ -3,7 +3,6 @@
 package MultiN;
 import FIFO::*;
 import Vector::*;
-import FIFOLI::*;
 
 interface GetIfc#(type t);
     method ActionValue#(t) get;
@@ -19,7 +18,7 @@ module mkMultiOnetoFour (MultiOneToFourIfc#(t))
         Bits#(t , a__)
     );
     FIFO#(t) inQ <- mkFIFO;
-    Vector#(4, FIFOLI#(t, 3)) outQ <- replicateM(mkFIFOLI);
+    Vector#(4, FIFO#(t)) outQ <- replicateM(mkFIFO);
     Vector#(2, FIFO#(t)) tempQ <- replicateM(mkFIFO);
 
     rule ontToTwo;
@@ -65,7 +64,7 @@ module mkMultiOnetoEight (MultiOneToEightIfc#(t))
         Bits#(t , a__)
     );
     FIFO#(t) inQ <- mkFIFO;
-    Vector#(8, FIFOLI#(t, 3)) outQ <- replicateM(mkFIFOLI);
+    Vector#(8, FIFO#(t)) outQ <- replicateM(mkFIFO);
     Vector#(2, FIFO#(t)) temp_1Q <- replicateM(mkFIFO);
     Vector#(4, FIFO#(t)) temp_2Q <- replicateM(mkFIFO);
 
