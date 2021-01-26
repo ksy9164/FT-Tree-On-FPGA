@@ -16,17 +16,11 @@ import MultiN::*;
 import SinglePipe::*;
 import Merger::*;
 
-import DRAMController::*;
-
 interface HwMainIfc;
 endinterface
 
-module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
+module mkHwMain#(PcieUserIfc pcie) (HwMainIfc);
     Reg#(Bit#(32)) file_size <- mkReg(0);
-    Reg#(Bit#(32)) dramReadCnt <- mkReg(0);
-    Reg#(Bit#(32)) dramWriteCnt <- mkReg(0);
-    SerializerIfc#(512, 4) serial_dramQ <- mkSerializer; 
-
     Reg#(Bit#(32)) addr <- mkReg(0);
 
     FIFOLI#(Bit#(152), 3) hashtableQ <- mkFIFOLI;
@@ -46,7 +40,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     DeSerializerIfc#(32, 4) deserial_sub_hasht <- mkDeSerializer;
     DeSerializerIfc#(128, 4) deserial_pcieio <- mkDeSerializer;
 
-    Vector#(3, SinglePipeIfc) pipe <- replicateM(mkSinglePipe);
+    Vector#(4, SinglePipeIfc) pipe <- replicateM(mkSinglePipe);
 
     FIFO#(Bit#(32)) dmaReadReqQ <- mkFIFO;
     Reg#(Bit#(32)) readCnt <- mkReg(0);
@@ -96,12 +90,6 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
         pcie.dmaReadReq(16 * readOff, truncate(cnt)); // offset, words
         readCnt <= cnt;
         readOff <= readOff + cnt;
-    endrule
-
-    rule getDataFromDMA(readCnt != 0);
-        Bit#(128) rd <- pcie.dmaReadWord;
-        deserial_pcieio.put(rd);
-        readCnt <= readCnt - 1;
     endrule
 
     /* Get Hash Table Data From The Host */
@@ -157,6 +145,7 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
         pipe[0].putHashTable(d);
         pipe[1].putHashTable(d);
         pipe[2].putHashTable(d);
+        pipe[3].putHashTable(d);
     endrule
 
     /* Put SubHashTable Data */
@@ -166,39 +155,23 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
         pipe[0].putSubHashTable(d);
         pipe[1].putSubHashTable(d);
         pipe[2].putSubHashTable(d);
+        pipe[3].putSubHashTable(d);
     endrule
 
 ///////////////////////////////////////////////////////////////////////////////////////
     /* DRAM CTL & Put data to Single-Pipe */
-    rule dramWrite(dramWriteCnt < file_size);
-        dramWriteCnt <= dramWriteCnt + 1;
-        Bit#(512) d <- deserial_pcieio.get;
-        dram.write(zeroExtend(dramWriteCnt)*64, d, 64);
-    endrule
 
-    rule dramReadReq(dramWriteCnt >= file_size && dramReadCnt < file_size);
-        dramReadCnt <= dramReadCnt + 1;
-        dram.readReq(zeroExtend(dramReadCnt)*64, 64);
-    endrule
-
-    rule dramRead;
-        Bit#(512) d <- dram.read;
-        serial_dramQ.put(d);
-    endrule
-
-    rule putDecomp;
-        Bit#(128) d <- serial_dramQ.get;
+    rule getDataFromDMA(readCnt != 0);
+        Bit#(128) rd <- pcie.dmaReadWord;
         Bit#(2) idx = dramToPipeHandle;
-        if (dramToPipeHandle == 2) begin
-            dramToPipeHandle <= 0;
-        end else begin
-            dramToPipeHandle <= dramToPipeHandle + 1;
-        end
-        pipe[idx].putData(d);
+        readCnt <= readCnt - 1;
+        dramToPipeHandle <= dramToPipeHandle + 1;
+        pipe[idx].putData(rd);
     endrule
 
     Vector#(8, MergerIfc) outmerger_1 <- replicateM(mkMerger);
     Vector#(8, MergerIfc) outmerger_2 <- replicateM(mkMerger);
+    Vector#(8, MergerIfc) outmerger_3 <- replicateM(mkMerger);
 
     for (Bit#(4) i = 0; i < 8; i = i + 1) begin
         rule merge_step1_1;
@@ -213,25 +186,31 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
                 outmerger_1[i].enqTwo(d);
             end
         endrule
-    end
 
-
-    for (Bit#(4) i = 0; i < 8; i = i + 1) begin
-        rule merge_step2_1;
-            outmerger_1[i].deq;
-            Bit#(128) d = outmerger_1[i].first;
+        rule merge_step1_3;
+            Bit#(128) d <- pipe[2].get[i].get;
             if (d != 0) begin
                 outmerger_2[i].enqOne(d);
             end
         endrule
-        rule merge_step2_2;
-            Bit#(128) d <- pipe[2].get[i].get;
+        rule merge_step1_4;
+            Bit#(128) d <- pipe[3].get[i].get;
             if (d != 0) begin
                 outmerger_2[i].enqTwo(d);
             end
         endrule
-    end
 
+        rule merge_step2_1;
+            outmerger_1[i].deq;
+            Bit#(128) d = outmerger_1[i].first;
+            outmerger_3[i].enqOne(d);
+        endrule
+        rule merge_step2_2;
+            outmerger_2[i].deq;
+            Bit#(128) d = outmerger_2[i].first;
+            outmerger_3[i].enqTwo(d);
+        endrule
+    end
 /////////////////////Merging outputs and Sending to Host via DMA//////////////////////
 
     Vector#(4, MergerIfc) merger8to4 <- replicateM(mkMerger);
@@ -241,11 +220,11 @@ module mkHwMain#(PcieUserIfc pcie, DRAMUserIfc dram) (HwMainIfc);
     for (Bit#(8) i = 0; i < 8; i = i + 1) begin
         rule mergeStep1;
             Bit#(8) id = i / 2;
-            outmerger_2[i].deq;
+            outmerger_3[i].deq;
             if (i%2 == 0) begin
-                merger8to4[id].enqOne(outmerger_2[i].first);
+                merger8to4[id].enqOne(outmerger_3[i].first);
             end else begin
-                merger8to4[id].enqTwo(outmerger_2[i].first);
+                merger8to4[id].enqTwo(outmerger_3[i].first);
             end
         endrule
     end

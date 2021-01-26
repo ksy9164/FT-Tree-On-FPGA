@@ -113,10 +113,11 @@ int main(int argc, char** argv) {
 
     // increasing data size (same , duplicated)
     for ( uint32_t i = 0; i < 1024*1024/4; i++ ) {
-        uint32_t id = (i / 4) * 12 +  (i % 4);
+        uint32_t id = (i / 4) * 16 +  (i % 4);
         ((uint32_t*)dmabuf)[id] = log_data[i];
         ((uint32_t*)dmabuf)[id + 4] = log_data[i];
         ((uint32_t*)dmabuf)[id + 8] = log_data[i];
+        ((uint32_t*)dmabuf)[id + 12] = log_data[i];
     }
 
     for (int i = 0; i < 128 * 3; ++i) {
